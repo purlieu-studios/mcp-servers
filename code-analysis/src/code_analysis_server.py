@@ -14,6 +14,7 @@ from .analyzers.csharp_analyzer import CSharpAnalyzer
 from .complexity import calculate_complexity
 from .code_smells import detect_code_smells
 from .dependency_analyzer import DependencyAnalyzer
+from .analysis_cache import get_cache
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +32,9 @@ analyzers = {
 }
 
 dependency_analyzer = DependencyAnalyzer()
+
+# Initialize cache
+cache = get_cache()
 
 
 @server.list_tools()
@@ -137,6 +141,27 @@ async def list_tools() -> list[types.Tool]:
                 },
                 "required": ["file_path"]
             }
+        ),
+        types.Tool(
+            name="get_cache_stats",
+            description="Get analysis cache statistics (hit rate, size, entries)",
+            inputSchema={
+                "type": "object",
+                "properties": {}
+            }
+        ),
+        types.Tool(
+            name="clear_cache",
+            description="Clear analysis cache entries (optionally older than N days)",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "older_than_days": {
+                        "type": "integer",
+                        "description": "Clear only entries older than this many days (optional)"
+                    }
+                }
+            }
         )
     ]
 
@@ -157,6 +182,10 @@ async def call_tool(name: str, arguments: Any) -> list[types.TextContent]:
             result = await handle_find_dependencies(arguments)
         elif name == "analyze_classes":
             result = await handle_analyze_classes(arguments)
+        elif name == "get_cache_stats":
+            result = handle_get_cache_stats()
+        elif name == "clear_cache":
+            result = handle_clear_cache(arguments)
         else:
             raise ValueError(f"Unknown tool: {name}")
 
@@ -183,14 +212,29 @@ async def handle_parse_ast(arguments: Dict[str, Any]) -> Dict[str, Any]:
     if not analyzer:
         raise ValueError(f"No analyzer available for {file_path.suffix} files")
 
+    # Check cache first
+    cache_key = f"ast_body_{include_body}"
+    cached_result = cache.get(file_path, cache_key)
+    if cached_result is not None:
+        logger.info(f"[CACHE HIT] AST parse for {file_path.name}")
+        cached_result["_cached"] = True
+        return cached_result
+
     # Parse and return AST
     ast_data = await analyzer.parse_file(file_path, include_body=include_body)
 
-    return {
+    result = {
         "file_path": str(file_path),
         "language": analyzer.language,
-        "ast": ast_data
+        "ast": ast_data,
+        "_cached": False
     }
+
+    # Store in cache
+    cache.set(file_path, cache_key, result)
+    logger.info(f"[CACHE MISS] Parsed AST for {file_path.name}")
+
+    return result
 
 
 async def handle_analyze_complexity(arguments: Dict[str, Any]) -> Dict[str, Any]:
@@ -205,6 +249,14 @@ async def handle_analyze_complexity(arguments: Dict[str, Any]) -> Dict[str, Any]
     if not analyzer:
         raise ValueError(f"No analyzer available for {file_path.suffix} files")
 
+    # Check cache first
+    cache_key = f"complexity_{function_name or 'all'}"
+    cached_result = cache.get(file_path, cache_key)
+    if cached_result is not None:
+        logger.info(f"[CACHE HIT] Complexity analysis for {file_path.name}")
+        cached_result["_cached"] = True
+        return cached_result
+
     # Calculate complexity metrics
     complexity_data = await calculate_complexity(
         file_path,
@@ -212,10 +264,17 @@ async def handle_analyze_complexity(arguments: Dict[str, Any]) -> Dict[str, Any]
         function_name=function_name
     )
 
-    return {
+    result = {
         "file_path": str(file_path),
-        "complexity": complexity_data
+        "complexity": complexity_data,
+        "_cached": False
     }
+
+    # Store in cache
+    cache.set(file_path, cache_key, result)
+    logger.info(f"[CACHE MISS] Computed complexity for {file_path.name}")
+
+    return result
 
 
 async def handle_find_code_smells(arguments: Dict[str, Any]) -> Dict[str, Any]:
@@ -230,6 +289,14 @@ async def handle_find_code_smells(arguments: Dict[str, Any]) -> Dict[str, Any]:
     if not analyzer:
         raise ValueError(f"No analyzer available for {file_path.suffix} files")
 
+    # Check cache first
+    cache_key = f"smells_{severity}"
+    cached_result = cache.get(file_path, cache_key)
+    if cached_result is not None:
+        logger.info(f"[CACHE HIT] Code smells analysis for {file_path.name}")
+        cached_result["_cached"] = True
+        return cached_result
+
     # Detect code smells
     smells = await detect_code_smells(
         file_path,
@@ -237,11 +304,18 @@ async def handle_find_code_smells(arguments: Dict[str, Any]) -> Dict[str, Any]:
         min_severity=severity
     )
 
-    return {
+    result = {
         "file_path": str(file_path),
         "code_smells": smells,
-        "total_issues": len(smells)
+        "total_issues": len(smells),
+        "_cached": False
     }
+
+    # Store in cache
+    cache.set(file_path, cache_key, result)
+    logger.info(f"[CACHE MISS] Computed code smells for {file_path.name}")
+
+    return result
 
 
 async def handle_analyze_functions(arguments: Dict[str, Any]) -> Dict[str, Any]:
@@ -255,14 +329,29 @@ async def handle_analyze_functions(arguments: Dict[str, Any]) -> Dict[str, Any]:
     if not analyzer:
         raise ValueError(f"No analyzer available for {file_path.suffix} files")
 
+    # Check cache first
+    cache_key = "functions"
+    cached_result = cache.get(file_path, cache_key)
+    if cached_result is not None:
+        logger.info(f"[CACHE HIT] Function analysis for {file_path.name}")
+        cached_result["_cached"] = True
+        return cached_result
+
     # Extract function information
     functions = await analyzer.analyze_functions(file_path)
 
-    return {
+    result = {
         "file_path": str(file_path),
         "functions": functions,
-        "function_count": len(functions)
+        "function_count": len(functions),
+        "_cached": False
     }
+
+    # Store in cache
+    cache.set(file_path, cache_key, result)
+    logger.info(f"[CACHE MISS] Analyzed functions for {file_path.name}")
+
+    return result
 
 
 async def handle_analyze_classes(arguments: Dict[str, Any]) -> Dict[str, Any]:
@@ -276,14 +365,29 @@ async def handle_analyze_classes(arguments: Dict[str, Any]) -> Dict[str, Any]:
     if not analyzer:
         raise ValueError(f"No analyzer available for {file_path.suffix} files")
 
+    # Check cache first
+    cache_key = "classes"
+    cached_result = cache.get(file_path, cache_key)
+    if cached_result is not None:
+        logger.info(f"[CACHE HIT] Class analysis for {file_path.name}")
+        cached_result["_cached"] = True
+        return cached_result
+
     # Extract class information
     classes = await analyzer.analyze_classes(file_path)
 
-    return {
+    result = {
         "file_path": str(file_path),
         "classes": classes,
-        "class_count": len(classes)
+        "class_count": len(classes),
+        "_cached": False
     }
+
+    # Store in cache
+    cache.set(file_path, cache_key, result)
+    logger.info(f"[CACHE MISS] Analyzed classes for {file_path.name}")
+
+    return result
 
 
 async def handle_find_dependencies(arguments: Dict[str, Any]) -> Dict[str, Any]:
@@ -303,6 +407,32 @@ async def handle_find_dependencies(arguments: Dict[str, Any]) -> Dict[str, Any]:
     return {
         "path": str(file_path),
         "dependencies": dependencies
+    }
+
+
+def handle_get_cache_stats() -> Dict[str, Any]:
+    """Get cache statistics."""
+    stats = cache.get_stats()
+    logger.info(f"Cache stats: {stats['hit_rate_percent']}% hit rate, {stats['cache_entries']} entries")
+    return stats
+
+
+def handle_clear_cache(arguments: Dict[str, Any]) -> Dict[str, Any]:
+    """Clear analysis cache."""
+    older_than_days = arguments.get("older_than_days")
+
+    cleared = cache.clear(older_than_days=older_than_days)
+
+    message = f"Cleared {cleared} cache entries"
+    if older_than_days:
+        message += f" older than {older_than_days} days"
+
+    logger.info(message)
+
+    return {
+        "cleared_entries": cleared,
+        "message": message,
+        "cache_stats": cache.get_stats()
     }
 
 
