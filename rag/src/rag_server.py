@@ -14,6 +14,7 @@ from .embeddings import OllamaEmbedder
 from .document_processor import DocumentProcessor
 from .index_manager import IndexManager
 from .file_watcher import FileWatcher
+from .query_history import get_query_history
 
 # Set up logging
 logging.basicConfig(
@@ -33,6 +34,7 @@ class RAGServer:
         self.embedder: Optional[OllamaEmbedder] = None
         self.doc_processor: Optional[DocumentProcessor] = None
         self.file_watcher: Optional[FileWatcher] = None
+        self.query_history = get_query_history()
 
         self._register_handlers()
 
@@ -242,6 +244,43 @@ class RAGServer:
                         "required": ["pattern"]
                     }
                 ),
+                Tool(
+                    name="get_query_history",
+                    description="Get recent query history for session replay and context retention",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "limit": {
+                                "type": "number",
+                                "description": "Maximum number of queries to return (default: 20)",
+                                "default": 20
+                            },
+                            "index_name": {
+                                "type": "string",
+                                "description": "Filter by index name (optional)"
+                            },
+                            "include_results": {
+                                "type": "boolean",
+                                "description": "Include full result sets (default: false)",
+                                "default": False
+                            }
+                        }
+                    }
+                ),
+                Tool(
+                    name="replay_query",
+                    description="Replay a previous query by ID to retrieve its results",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "query_id": {
+                                "type": "number",
+                                "description": "ID of the query to replay"
+                            }
+                        },
+                        "required": ["query_id"]
+                    }
+                ),
             ]
 
         @self.server.call_tool()
@@ -258,6 +297,10 @@ class RAGServer:
                     return await self._handle_get_index_info(arguments)
                 elif name == "search_files":
                     return await self._handle_search_files(arguments)
+                elif name == "get_query_history":
+                    return await self._handle_get_query_history(arguments)
+                elif name == "replay_query":
+                    return await self._handle_replay_query(arguments)
                 else:
                     return [TextContent(type="text", text=f"Unknown tool: {name}")]
             except Exception as e:
@@ -266,6 +309,9 @@ class RAGServer:
 
     async def _handle_query(self, arguments: dict) -> list[TextContent]:
         """Handle query tool."""
+        import time
+        start_time = time.time()
+
         query = arguments.get('query')
         index_name = arguments.get('index_name')
         top_k = arguments.get('top_k', 5)
@@ -311,6 +357,23 @@ class RAGServer:
         # Sort by score and limit
         all_results.sort(key=lambda x: x['score'], reverse=True)
         all_results = all_results[:top_k]
+
+        # Calculate duration
+        duration_ms = int((time.time() - start_time) * 1000)
+
+        # Save to query history
+        try:
+            self.query_history.save_query(
+                query=query,
+                results=all_results,
+                index_name=index_name,
+                top_k=top_k,
+                min_score=min_score,
+                include_keywords=include_keywords,
+                duration_ms=duration_ms
+            )
+        except Exception as e:
+            logger.error(f"Error saving query history: {e}")
 
         # Format results
         if not all_results:
@@ -431,6 +494,80 @@ class RAGServer:
 
         if len(matching_files) > 100:
             output += f"\n... and {len(matching_files) - 100} more files"
+
+        return [TextContent(type="text", text=output)]
+
+    async def _handle_get_query_history(self, arguments: dict) -> list[TextContent]:
+        """Handle get_query_history tool."""
+        limit = arguments.get('limit', 20)
+        index_name = arguments.get('index_name')
+        include_results = arguments.get('include_results', False)
+
+        history = self.query_history.get_history(
+            limit=limit,
+            index_name=index_name,
+            include_results=include_results
+        )
+
+        if not history:
+            return [TextContent(type="text", text="No query history found")]
+
+        output = f"Query History (showing {len(history)} recent queries):\n\n"
+        for entry in history:
+            output += f"ID: {entry['id']}\n"
+            output += f"Query: \"{entry['query']}\"\n"
+            output += f"Timestamp: {entry['timestamp']}\n"
+            output += f"Index: {entry['index_name'] or 'all'}\n"
+            output += f"Results: {entry['result_count']}\n"
+            if entry['duration_ms']:
+                output += f"Duration: {entry['duration_ms']}ms\n"
+
+            if include_results and 'results' in entry:
+                output += "\nResults:\n"
+                for i, result in enumerate(entry['results'][:3], 1):
+                    output += f"  {i}. {result['file']} (score: {result['score']:.3f})\n"
+                if len(entry['results']) > 3:
+                    output += f"  ... and {len(entry['results']) - 3} more\n"
+
+            output += "-" * 60 + "\n\n"
+
+        # Add summary stats
+        stats = self.query_history.get_stats()
+        output += "\nStatistics:\n"
+        output += f"Total queries: {stats['total_queries']}\n"
+        output += f"Average results per query: {stats['avg_results_per_query']}\n"
+        output += f"Average query time: {stats['avg_duration_ms']}ms\n"
+
+        return [TextContent(type="text", text=output)]
+
+    async def _handle_replay_query(self, arguments: dict) -> list[TextContent]:
+        """Handle replay_query tool."""
+        query_id = arguments.get('query_id')
+
+        if query_id is None:
+            return [TextContent(type="text", text="Error: query_id is required")]
+
+        query_entry = self.query_history.get_query_by_id(int(query_id))
+
+        if query_entry is None:
+            return [TextContent(type="text", text=f"Query ID {query_id} not found in history")]
+
+        # Format the replay output
+        output = f"Replaying Query ID: {query_entry['id']}\n"
+        output += f"Original Query: \"{query_entry['query']}\"\n"
+        output += f"Timestamp: {query_entry['timestamp']}\n"
+        output += f"Index: {query_entry['index_name'] or 'all'}\n"
+        output += f"Parameters: top_k={query_entry['top_k']}, min_score={query_entry['min_score']}\n"
+        output += f"Duration: {query_entry['duration_ms']}ms\n"
+        output += f"\nFound {query_entry['result_count']} results:\n\n"
+
+        for i, result in enumerate(query_entry['results'], 1):
+            output += f"Result {i} (score: {result['score']:.3f})\n"
+            output += f"Index: {result['index']}\n"
+            output += f"File: {result['file']}\n"
+            output += f"Location: chars {result['location']}\n"
+            output += f"Content:\n{result['text']}\n"
+            output += "-" * 80 + "\n\n"
 
         return [TextContent(type="text", text=output)]
 
