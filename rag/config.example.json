@@ -1,0 +1,39 @@
+{
+  "server_name": "rag-mcp-server",
+  "storage_path": "~/.rag-mcp-indexes",
+  "ollama": {
+    "base_url": "http://localhost:11434",
+    "embedding_model": "nomic-embed-text",
+    "batch_size": 32
+  },
+  "chunking": {
+    "strategy": "recursive",
+    "chunk_size": 512,
+    "overlap": 50
+  },
+  "file_types": [".txt", ".md", ".py", ".js", ".ts", ".tsx", ".jsx", ".json", ".yaml", ".yml", ".rst", ".java", ".cpp", ".c", ".h", ".go", ".rs", ".rb", ".php"],
+  "exclude_patterns": [
+    "node_modules/**",
+    ".git/**",
+    "__pycache__/**",
+    "*.pyc",
+    ".venv/**",
+    "venv/**",
+    "dist/**",
+    "build/**",
+    ".next/**",
+    "target/**"
+  ],
+  "auto_index": [
+    {
+      "name": "example-project",
+      "path": "/path/to/your/project",
+      "watch": true
+    }
+  ],
+  "refresh_strategy": "hash_based",
+  "hybrid_search": {
+    "semantic_weight": 0.7,
+    "keyword_weight": 0.3
+  }
+}

@@ -1,0 +1,59 @@
+name: Tests
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master, develop ]
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python-version: ['3.10', '3.11', '3.12']
+        server: ['code-analysis', 'efcore-analysis', 'rag']
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: 'pip'
+
+    - name: Install dependencies for ${{ matrix.server }}
+      run: |
+        cd ${{ matrix.server }}
+        python -m pip install --upgrade pip
+        pip install -e .
+        pip install pytest pytest-asyncio pytest-cov pytest-mock
+
+    - name: Run tests for ${{ matrix.server }}
+      run: |
+        cd ${{ matrix.server }}
+        python -m pytest tests/ -v --cov=src --cov-report=xml --cov-report=term
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        file: ${{ matrix.server }}/coverage.xml
+        flags: ${{ matrix.server }}
+        name: ${{ matrix.server }}-${{ matrix.os }}-py${{ matrix.python-version }}
+        fail_ci_if_error: false
+
+  test-summary:
+    needs: test
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+    - name: Check test results
+      run: |
+        if [ "${{ needs.test.result }}" != "success" ]; then
+          echo "Tests failed!"
+          exit 1
+        fi
+        echo "All tests passed!"
