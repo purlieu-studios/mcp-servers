@@ -241,25 +241,53 @@ cd rag && python -m pytest tests/ -v --cov=src
 - [ ] GPU embedding support
 - [ ] Distributed indexing
 
+## 🤝 Contributing
+
+We welcome contributions! Please follow these guidelines:
+
+- **📏 Size Limit**: PRs should be ≤500 lines of production code
+- **🧪 Tests Required**: All changes need tests (≥80% coverage)
+- **📝 Documentation**: Update docs for any API/tool changes
+- **✅ CI Passing**: All tests must pass in CI
+
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for detailed guidelines.
+
+### Quick Start for Contributors
+
+```bash
+# Fork and clone
+git clone https://github.com/YOUR_USERNAME/mcp-servers.git
+cd mcp-servers
+
+# Create a branch
+git checkout -b feature/your-feature
+
+# Make changes, add tests, run tests
+cd <server-directory>
+pytest tests/ -v
+
+# Commit and push
+git commit -m "feat: your feature description"
+git push origin feature/your-feature
+
+# Create PR using the template
+```
+
 ## 📚 Learn More
 
 - [Model Context Protocol](https://modelcontextprotocol.io/)
 - [Claude Code Documentation](https://claude.com/claude-code)
 - [MCP Specification](https://spec.modelcontextprotocol.io/)
+- [Contributing Guidelines](./CONTRIBUTING.md)
 
-## 🤝 Contributing
+## 📁 Project Structure
 
 Each server is self-contained and follows this structure:
 - `src/` - Source code
 - `README.md` - Comprehensive documentation
 - `requirements.txt` - Python dependencies
-- `tests/` - Test suite (when applicable)
-
-Contributions welcome! Feel free to:
-- Report bugs or request features via GitHub Issues
-- Submit pull requests for improvements
-- Add new MCP servers following the existing patterns
-- Improve documentation or add examples
+- `tests/` - Test suite with ≥80% coverage
+- `CLAUDE.md` - Claude-specific usage guide
 
 ## 💡 Requirements
 

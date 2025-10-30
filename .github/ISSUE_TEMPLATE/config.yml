@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 Discussions
+    url: https://github.com/purlieu-studios/mcp-servers/discussions
+    about: Ask questions, share ideas, or discuss the project
+  - name: 📚 Documentation
+    url: https://github.com/purlieu-studios/mcp-servers/blob/main/README.md
+    about: Read the project documentation
+  - name: 🤝 Contributing Guide
+    url: https://github.com/purlieu-studios/mcp-servers/blob/main/CONTRIBUTING.md
+    about: Learn how to contribute to the project

@@ -1,0 +1,135 @@
+name: PR Size Check
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  check-pr-size:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Check PR size
+      id: pr-size
+      run: |
+        # Get base branch (usually main)
+        BASE_BRANCH="${{ github.base_ref }}"
+
+        # Fetch base branch
+        git fetch origin $BASE_BRANCH
+
+        # Count lines changed (excluding tests, docs, config)
+        TOTAL_ADDITIONS=$(git diff --numstat origin/$BASE_BRANCH...HEAD | awk '{total+=$1} END {print total}')
+        TOTAL_DELETIONS=$(git diff --numstat origin/$BASE_BRANCH...HEAD | awk '{total+=$2} END {print total}')
+
+        # Count only production code additions (exclude tests, docs, config)
+        PROD_CODE_ADDITIONS=$(git diff --numstat origin/$BASE_BRANCH...HEAD -- \
+          '*.py' '*.js' '*.ts' '*.cs' \
+          ':!tests/' ':!test_*.py' ':!*.test.js' ':!*.test.ts' \
+          ':!**/*.md' ':!*.txt' \
+          ':!*.json' ':!*.yml' ':!*.yaml' ':!*.ini' \
+          ':!requirements*.txt' ':!package*.json' ':!setup.py' \
+          | awk '{total+=$1} END {print total}')
+
+        # Default to 0 if empty
+        PROD_CODE_ADDITIONS=${PROD_CODE_ADDITIONS:-0}
+        TOTAL_ADDITIONS=${TOTAL_ADDITIONS:-0}
+        TOTAL_DELETIONS=${TOTAL_DELETIONS:-0}
+
+        echo "Production code additions: $PROD_CODE_ADDITIONS lines"
+        echo "Total additions: $TOTAL_ADDITIONS lines"
+        echo "Total deletions: $TOTAL_DELETIONS lines"
+
+        # Save to output
+        echo "prod_code=$PROD_CODE_ADDITIONS" >> $GITHUB_OUTPUT
+        echo "total_additions=$TOTAL_ADDITIONS" >> $GITHUB_OUTPUT
+        echo "total_deletions=$TOTAL_DELETIONS" >> $GITHUB_OUTPUT
+
+        # Check if over limit
+        if [ $PROD_CODE_ADDITIONS -gt 500 ]; then
+          echo "status=warning" >> $GITHUB_OUTPUT
+          echo "⚠️ PR exceeds 500 LOC limit (${PROD_CODE_ADDITIONS} lines)" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "status=success" >> $GITHUB_OUTPUT
+          echo "✅ PR is within 500 LOC limit (${PROD_CODE_ADDITIONS} lines)" >> $GITHUB_STEP_SUMMARY
+        fi
+
+    - name: Comment on PR
+      if: steps.pr-size.outputs.status == 'warning'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const prodCode = ${{ steps.pr-size.outputs.prod_code }};
+          const totalAdd = ${{ steps.pr-size.outputs.total_additions }};
+          const totalDel = ${{ steps.pr-size.outputs.total_deletions }};
+
+          const body = `## ⚠️ PR Size Warning
+
+          This PR exceeds the recommended **500 lines of code** limit.
+
+          ### 📊 Line Count
+          - **Production code additions**: ${prodCode} lines ⚠️
+          - Total additions: ${totalAdd} lines
+          - Total deletions: ${totalDel} lines
+
+          ### 📏 Size Guidelines
+
+          PRs should ideally be **≤500 LOC** for:
+          - ✅ Easier code review
+          - ✅ Faster iteration
+          - ✅ Reduced risk
+          - ✅ Better testing
+
+          ### 🔄 Options
+
+          1. **Split into smaller PRs** (recommended)
+             - Break into logical, incremental changes
+             - Each PR focuses on one thing
+
+          2. **Justify the size**
+             - Add explanation in PR description
+             - Explain why it can't be split
+             - Get pre-approval from maintainers
+
+          ### ℹ️ Valid Reasons for Large PRs
+          - New module with comprehensive tests
+          - Major refactoring (though phases preferred)
+          - Database migration with generated code
+          - Third-party library integration
+
+          See [CONTRIBUTING.md](https://github.com/purlieu-studios/mcp-servers/blob/main/CONTRIBUTING.md#-code-size-limits) for details.
+
+          ---
+          <sub>This is an automated check. Tests and documentation don't count towards the limit.</sub>`;
+
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: body
+          });
+
+    - name: Add success comment
+      if: steps.pr-size.outputs.status == 'success'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const prodCode = ${{ steps.pr-size.outputs.prod_code }};
+
+          const body = `## ✅ PR Size Check Passed
+
+          This PR is within the recommended **500 LOC** limit.
+
+          - **Production code additions**: ${prodCode} lines ✅
+
+          Great job keeping the PR focused and reviewable! 🎉`;
+
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: body
+          });
