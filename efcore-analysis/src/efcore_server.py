@@ -1,18 +1,19 @@
 """EF Core Analysis MCP Server - DbContext and Entity Framework Core analysis."""
 
-import logging
 import asyncio
+import logging
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
+
 import mcp.types as types
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
 
 from .analyzers.dbcontext_analyzer import DbContextAnalyzer
 from .analyzers.entity_analyzer import EntityAnalyzer
-from .analyzers.migration_analyzer import MigrationAnalyzer
-from .analyzers.linq_analyzer import LinqAnalyzer
 from .analyzers.index_recommender import IndexRecommender
+from .analyzers.linq_analyzer import LinqAnalyzer
+from .analyzers.migration_analyzer import MigrationAnalyzer
 
 logger = logging.getLogger(__name__)
 
@@ -39,11 +40,11 @@ async def list_tools() -> list[types.Tool]:
                 "properties": {
                     "file_path": {
                         "type": "string",
-                        "description": "Path to the DbContext file (.cs)"
+                        "description": "Path to the DbContext file (.cs)",
                     }
                 },
-                "required": ["file_path"]
-            }
+                "required": ["file_path"],
+            },
         ),
         types.Tool(
             name="analyze_entity",
@@ -53,15 +54,15 @@ async def list_tools() -> list[types.Tool]:
                 "properties": {
                     "file_path": {
                         "type": "string",
-                        "description": "Path to the entity class file (.cs)"
+                        "description": "Path to the entity class file (.cs)",
                     },
                     "entity_name": {
                         "type": "string",
-                        "description": "Optional: specific entity class name to analyze"
-                    }
+                        "description": "Optional: specific entity class name to analyze",
+                    },
                 },
-                "required": ["file_path"]
-            }
+                "required": ["file_path"],
+            },
         ),
         types.Tool(
             name="generate_migration",
@@ -71,19 +72,19 @@ async def list_tools() -> list[types.Tool]:
                 "properties": {
                     "old_model_path": {
                         "type": "string",
-                        "description": "Path to the old entity model file"
+                        "description": "Path to the old entity model file",
                     },
                     "new_model_path": {
                         "type": "string",
-                        "description": "Path to the new entity model file"
+                        "description": "Path to the new entity model file",
                     },
                     "migration_name": {
                         "type": "string",
-                        "description": "Name for the migration (e.g., AddUserEmailIndex)"
-                    }
+                        "description": "Name for the migration (e.g., AddUserEmailIndex)",
+                    },
                 },
-                "required": ["old_model_path", "new_model_path", "migration_name"]
-            }
+                "required": ["old_model_path", "new_model_path", "migration_name"],
+            },
         ),
         types.Tool(
             name="analyze_linq",
@@ -93,11 +94,11 @@ async def list_tools() -> list[types.Tool]:
                 "properties": {
                     "file_path": {
                         "type": "string",
-                        "description": "Path to the file containing LINQ queries"
+                        "description": "Path to the file containing LINQ queries",
                     }
                 },
-                "required": ["file_path"]
-            }
+                "required": ["file_path"],
+            },
         ),
         types.Tool(
             name="suggest_indexes",
@@ -107,15 +108,15 @@ async def list_tools() -> list[types.Tool]:
                 "properties": {
                     "project_path": {
                         "type": "string",
-                        "description": "Path to the project directory to analyze"
+                        "description": "Path to the project directory to analyze",
                     },
                     "dbcontext_name": {
                         "type": "string",
-                        "description": "Optional: specific DbContext to analyze"
-                    }
+                        "description": "Optional: specific DbContext to analyze",
+                    },
                 },
-                "required": ["project_path"]
-            }
+                "required": ["project_path"],
+            },
         ),
         types.Tool(
             name="validate_model",
@@ -125,11 +126,11 @@ async def list_tools() -> list[types.Tool]:
                 "properties": {
                     "file_path": {
                         "type": "string",
-                        "description": "Path to the entity model file or DbContext"
+                        "description": "Path to the entity model file or DbContext",
                     }
                 },
-                "required": ["file_path"]
-            }
+                "required": ["file_path"],
+            },
         ),
         types.Tool(
             name="find_relationships",
@@ -139,12 +140,12 @@ async def list_tools() -> list[types.Tool]:
                 "properties": {
                     "project_path": {
                         "type": "string",
-                        "description": "Path to the project directory"
+                        "description": "Path to the project directory",
                     }
                 },
-                "required": ["project_path"]
-            }
-        )
+                "required": ["project_path"],
+            },
+        ),
     ]
 
 
@@ -173,13 +174,10 @@ async def call_tool(name: str, arguments: Any) -> list[types.TextContent]:
 
     except Exception as e:
         logger.error(f"Error in tool {name}: {e}", exc_info=True)
-        return [types.TextContent(
-            type="text",
-            text=f"Error: {str(e)}"
-        )]
+        return [types.TextContent(type="text", text=f"Error: {str(e)}")]
 
 
-async def handle_analyze_dbcontext(arguments: Dict[str, Any]) -> Dict[str, Any]:
+async def handle_analyze_dbcontext(arguments: dict[str, Any]) -> dict[str, Any]:
     """Analyze DbContext class."""
     file_path = Path(arguments["file_path"])
 
@@ -188,13 +186,10 @@ async def handle_analyze_dbcontext(arguments: Dict[str, Any]) -> Dict[str, Any]:
 
     analysis = await dbcontext_analyzer.analyze(file_path)
 
-    return {
-        "file_path": str(file_path),
-        "dbcontext": analysis
-    }
+    return {"file_path": str(file_path), "dbcontext": analysis}
 
 
-async def handle_analyze_entity(arguments: Dict[str, Any]) -> Dict[str, Any]:
+async def handle_analyze_entity(arguments: dict[str, Any]) -> dict[str, Any]:
     """Analyze entity class."""
     file_path = Path(arguments["file_path"])
     entity_name = arguments.get("entity_name")
@@ -204,13 +199,10 @@ async def handle_analyze_entity(arguments: Dict[str, Any]) -> Dict[str, Any]:
 
     entities = await entity_analyzer.analyze(file_path, entity_name)
 
-    return {
-        "file_path": str(file_path),
-        "entities": entities
-    }
+    return {"file_path": str(file_path), "entities": entities}
 
 
-async def handle_generate_migration(arguments: Dict[str, Any]) -> Dict[str, Any]:
+async def handle_generate_migration(arguments: dict[str, Any]) -> dict[str, Any]:
     """Generate migration code."""
     old_path = Path(arguments["old_model_path"])
     new_path = Path(arguments["new_model_path"])
@@ -219,19 +211,12 @@ async def handle_generate_migration(arguments: Dict[str, Any]) -> Dict[str, Any]
     if not old_path.exists() or not new_path.exists():
         raise FileNotFoundError("Model files not found")
 
-    migration_code = await migration_analyzer.generate_migration(
-        old_path,
-        new_path,
-        migration_name
-    )
+    migration_code = await migration_analyzer.generate_migration(old_path, new_path, migration_name)
 
-    return {
-        "migration_name": migration_name,
-        "migration_code": migration_code
-    }
+    return {"migration_name": migration_name, "migration_code": migration_code}
 
 
-async def handle_analyze_linq(arguments: Dict[str, Any]) -> Dict[str, Any]:
+async def handle_analyze_linq(arguments: dict[str, Any]) -> dict[str, Any]:
     """Analyze LINQ queries."""
     file_path = Path(arguments["file_path"])
 
@@ -240,13 +225,10 @@ async def handle_analyze_linq(arguments: Dict[str, Any]) -> Dict[str, Any]:
 
     analysis = await linq_analyzer.analyze(file_path)
 
-    return {
-        "file_path": str(file_path),
-        "linq_analysis": analysis
-    }
+    return {"file_path": str(file_path), "linq_analysis": analysis}
 
 
-async def handle_suggest_indexes(arguments: Dict[str, Any]) -> Dict[str, Any]:
+async def handle_suggest_indexes(arguments: dict[str, Any]) -> dict[str, Any]:
     """Suggest database indexes."""
     project_path = Path(arguments["project_path"])
     dbcontext_name = arguments.get("dbcontext_name")
@@ -254,18 +236,12 @@ async def handle_suggest_indexes(arguments: Dict[str, Any]) -> Dict[str, Any]:
     if not project_path.exists():
         raise FileNotFoundError(f"Project path not found: {project_path}")
 
-    suggestions = await index_recommender.analyze(
-        project_path,
-        dbcontext_name=dbcontext_name
-    )
+    suggestions = await index_recommender.analyze(project_path, dbcontext_name=dbcontext_name)
 
-    return {
-        "project_path": str(project_path),
-        "index_suggestions": suggestions
-    }
+    return {"project_path": str(project_path), "index_suggestions": suggestions}
 
 
-async def handle_validate_model(arguments: Dict[str, Any]) -> Dict[str, Any]:
+async def handle_validate_model(arguments: dict[str, Any]) -> dict[str, Any]:
     """Validate entity model."""
     file_path = Path(arguments["file_path"])
 
@@ -274,13 +250,10 @@ async def handle_validate_model(arguments: Dict[str, Any]) -> Dict[str, Any]:
 
     validation_results = await entity_analyzer.validate(file_path)
 
-    return {
-        "file_path": str(file_path),
-        "validation": validation_results
-    }
+    return {"file_path": str(file_path), "validation": validation_results}
 
 
-async def handle_find_relationships(arguments: Dict[str, Any]) -> Dict[str, Any]:
+async def handle_find_relationships(arguments: dict[str, Any]) -> dict[str, Any]:
     """Find entity relationships."""
     project_path = Path(arguments["project_path"])
 
@@ -289,10 +262,7 @@ async def handle_find_relationships(arguments: Dict[str, Any]) -> Dict[str, Any]
 
     relationships = await entity_analyzer.find_relationships(project_path)
 
-    return {
-        "project_path": str(project_path),
-        "relationships": relationships
-    }
+    return {"project_path": str(project_path), "relationships": relationships}
 
 
 async def main():
@@ -300,11 +270,7 @@ async def main():
     logger.info("Starting EF Core Analysis MCP Server...")
 
     async with stdio_server() as (read_stream, write_stream):
-        await server.run(
-            read_stream,
-            write_stream,
-            server.create_initialization_options()
-        )
+        await server.run(read_stream, write_stream, server.create_initialization_options())
 
 
 if __name__ == "__main__":

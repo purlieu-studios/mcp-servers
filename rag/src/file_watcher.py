@@ -2,10 +2,11 @@
 
 import logging
 import time
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable, Set
+
+from watchdog.events import FileSystemEvent, FileSystemEventHandler
 from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler, FileSystemEvent
 
 logger = logging.getLogger(__name__)
 
@@ -13,8 +14,13 @@ logger = logging.getLogger(__name__)
 class IndexFileHandler(FileSystemEventHandler):
     """Handles file system events for index refresh."""
 
-    def __init__(self, directory: Path, file_types: Set[str],
-                 on_change_callback: Callable, debounce_seconds: float = 2.0):
+    def __init__(
+        self,
+        directory: Path,
+        file_types: set[str],
+        on_change_callback: Callable,
+        debounce_seconds: float = 2.0,
+    ):
         self.directory = directory
         self.file_types = file_types
         self.on_change_callback = on_change_callback
@@ -63,8 +69,7 @@ class FileWatcher:
         self.observer = Observer()
         self.handlers = {}
 
-    def watch_directory(self, directory: str, file_types: Set[str],
-                        on_change: Callable):
+    def watch_directory(self, directory: str, file_types: set[str], on_change: Callable):
         """Start watching a directory for changes.
 
         Args:
@@ -80,9 +85,7 @@ class FileWatcher:
 
         # Create handler
         handler = IndexFileHandler(
-            directory=directory_path,
-            file_types=file_types,
-            on_change_callback=on_change
+            directory=directory_path, file_types=file_types, on_change_callback=on_change
         )
 
         # Schedule watching

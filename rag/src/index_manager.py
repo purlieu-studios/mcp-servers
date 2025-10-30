@@ -1,15 +1,15 @@
 """Index manager for RAG system."""
 
 import logging
-from pathlib import Path
-from typing import List, Dict, Any, Optional, Tuple
 from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
 
-from .embeddings import OllamaEmbedder
-from .document_processor import DocumentProcessor, Document
 from .chunking import chunk_text
-from .vector_store import FAISSVectorStore
+from .document_processor import Document, DocumentProcessor
+from .embeddings import OllamaEmbedder
 from .metadata_store import MetadataStore
+from .vector_store import FAISSVectorStore
 
 logger = logging.getLogger(__name__)
 
@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class SearchResult:
     """Represents a search result."""
+
     chunk_id: int
     text: str
     file_path: str
@@ -28,9 +29,15 @@ class SearchResult:
 class IndexManager:
     """Manages document indexes with vector and metadata stores."""
 
-    def __init__(self, name: str, storage_path: Path, embedder: OllamaEmbedder,
-                 doc_processor: DocumentProcessor, chunk_size: int = 512,
-                 overlap: int = 50):
+    def __init__(
+        self,
+        name: str,
+        storage_path: Path,
+        embedder: OllamaEmbedder,
+        doc_processor: DocumentProcessor,
+        chunk_size: int = 512,
+        overlap: int = 50,
+    ):
         self.name = name
         self.storage_path = storage_path / name
         self.storage_path.mkdir(parents=True, exist_ok=True)
@@ -45,13 +52,12 @@ class IndexManager:
 
         vector_path = self.storage_path / "vectors"
         self.vector_store = FAISSVectorStore(
-            dimension=embedder.get_dimension(),
-            index_path=vector_path
+            dimension=embedder.get_dimension(), index_path=vector_path
         )
 
         logger.info(f"Initialized index manager for '{name}'")
 
-    def index_directory(self, directory: str) -> Dict[str, Any]:
+    def index_directory(self, directory: str) -> dict[str, Any]:
         """Index all documents in a directory.
 
         Returns:
@@ -64,7 +70,7 @@ class IndexManager:
 
         if not documents:
             logger.warning(f"No documents found in {directory}")
-            return {'files_indexed': 0, 'chunks_created': 0}
+            return {"files_indexed": 0, "chunks_created": 0}
 
         # Process each document
         files_indexed = 0
@@ -80,8 +86,8 @@ class IndexManager:
         self.vector_store.save()
 
         stats = {
-            'files_indexed': files_indexed,
-            'chunks_created': chunks_created,
+            "files_indexed": files_indexed,
+            "chunks_created": chunks_created,
         }
 
         logger.info(f"Indexing complete: {stats}")
@@ -99,13 +105,13 @@ class IndexManager:
                 file_path=doc.file_path,
                 file_type=doc.file_type,
                 content=doc.content,
-                size=doc.metadata.get('size', 0),
-                modified=doc.metadata.get('modified', 0)
+                size=doc.metadata.get("size", 0),
+                modified=doc.metadata.get("modified", 0),
             )
 
             # Check if file was unchanged
             existing_file = self.metadata_store.get_file_by_path(doc.file_path)
-            if existing_file and existing_file.get('hash'):
+            if existing_file and existing_file.get("hash"):
                 # File might be unchanged, but chunks were deleted if hash changed
                 pass
 
@@ -121,7 +127,7 @@ class IndexManager:
 
             # Store chunks and embeddings
             chunk_ids = []
-            for chunk, embedding in zip(chunks, embeddings):
+            for chunk, embedding in zip(chunks, embeddings, strict=False):
                 # Get current position in vector store
                 embedding_id = self.vector_store.index.ntotal if self.vector_store.index else 0
 
@@ -131,7 +137,7 @@ class IndexManager:
                     text=chunk.text,
                     start_char=chunk.start_char,
                     end_char=chunk.end_char,
-                    embedding_id=embedding_id
+                    embedding_id=embedding_id,
                 )
 
                 chunk_ids.append(chunk_id)
@@ -146,9 +152,15 @@ class IndexManager:
             logger.error(f"Error indexing document {doc.file_path}: {e}")
             return 0
 
-    def query(self, query_text: str, top_k: int = 5, min_score: float = 0.0,
-              semantic_weight: float = 0.7, keyword_weight: float = 0.3,
-              include_keywords: bool = True) -> List[SearchResult]:
+    def query(
+        self,
+        query_text: str,
+        top_k: int = 5,
+        min_score: float = 0.0,
+        semantic_weight: float = 0.7,
+        keyword_weight: float = 0.3,
+        include_keywords: bool = True,
+    ) -> list[SearchResult]:
         """Query the index using hybrid search.
 
         Args:
@@ -190,36 +202,38 @@ class IndexManager:
 
             chunk_data = self.metadata_store.get_chunk(chunk_id)
             if chunk_data:
-                results.append(SearchResult(
-                    chunk_id=chunk_id,
-                    text=chunk_data['text'],
-                    file_path=chunk_data['file_path'],
-                    score=score,
-                    start_char=chunk_data['start_char'],
-                    end_char=chunk_data['end_char']
-                ))
+                results.append(
+                    SearchResult(
+                        chunk_id=chunk_id,
+                        text=chunk_data["text"],
+                        file_path=chunk_data["file_path"],
+                        score=score,
+                        start_char=chunk_data["start_char"],
+                        end_char=chunk_data["end_char"],
+                    )
+                )
 
         return results
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Get statistics about the index."""
         metadata_stats = self.metadata_store.get_stats()
         vector_stats = self.vector_store.get_stats()
 
         return {
-            'name': self.name,
-            'files': metadata_stats['file_count'],
-            'chunks': metadata_stats['chunk_count'],
-            'size_bytes': metadata_stats['total_size_bytes'],
-            'vectors': vector_stats['total_vectors'],
+            "name": self.name,
+            "files": metadata_stats["file_count"],
+            "chunks": metadata_stats["chunk_count"],
+            "size_bytes": metadata_stats["total_size_bytes"],
+            "vectors": vector_stats["total_vectors"],
         }
 
-    def list_files(self) -> List[str]:
+    def list_files(self) -> list[str]:
         """List all indexed files."""
         files = self.metadata_store.get_all_files()
-        return [f['path'] for f in files]
+        return [f["path"] for f in files]
 
-    def refresh(self, directory: str) -> Dict[str, Any]:
+    def refresh(self, directory: str) -> dict[str, Any]:
         """Refresh index by re-indexing directory.
 
         This will update changed files and remove deleted files.

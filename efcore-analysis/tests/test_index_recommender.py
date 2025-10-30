@@ -1,9 +1,8 @@
 """Tests for Index recommendation system."""
 
 import pytest
-from pathlib import Path
-from src.analyzers.index_recommender import IndexRecommender
 
+from src.analyzers.index_recommender import IndexRecommender
 
 pytestmark = pytest.mark.unit
 
@@ -134,7 +133,7 @@ class TestIndexRecommender:
         repos_dir = project_dir / "Repositories"
         repos_dir.mkdir()
 
-        (repos_dir / "Repo1.cs").write_text('''
+        (repos_dir / "Repo1.cs").write_text("""
 using System.Linq;
 using MyApp.Data;
 
@@ -152,9 +151,9 @@ namespace MyApp.Repositories
         }
     }
 }
-''')
+""")
 
-        (repos_dir / "Repo2.cs").write_text('''
+        (repos_dir / "Repo2.cs").write_text("""
 using System.Linq;
 using MyApp.Data;
 
@@ -172,7 +171,7 @@ namespace MyApp.Repositories
         }
     }
 }
-''')
+""")
 
         suggestions = await recommender.analyze(project_dir)
 

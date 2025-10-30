@@ -1,9 +1,7 @@
 """Tests for FAISS vector store."""
-import pytest
-import numpy as np
-from pathlib import Path
-import pickle
+
 import faiss
+
 from src.vector_store import FAISSVectorStore
 
 
@@ -171,8 +169,8 @@ class TestFAISSVectorStore:
         store1.save()
 
         # Check files were created
-        faiss_file = index_path.with_suffix('.faiss')
-        mapping_file = index_path.with_suffix('.mapping')
+        faiss_file = index_path.with_suffix(".faiss")
+        mapping_file = index_path.with_suffix(".mapping")
         assert faiss_file.exists(), f"FAISS file not created: {faiss_file}"
         assert mapping_file.exists(), f"Mapping file not created: {mapping_file}"
 
@@ -214,7 +212,7 @@ class TestFAISSVectorStore:
 
         # Create corrupted files
         index_path.parent.mkdir(parents=True, exist_ok=True)
-        faiss_path = index_path.with_suffix('.faiss')
+        faiss_path = index_path.with_suffix(".faiss")
         faiss_path.write_text("corrupted data")
 
         store = FAISSVectorStore(dimension=768, index_path=index_path)
@@ -232,7 +230,7 @@ class TestFAISSVectorStore:
 
         # Save only the FAISS index
         index_path.parent.mkdir(parents=True, exist_ok=True)
-        faiss_path = index_path.with_suffix('.faiss')
+        faiss_path = index_path.with_suffix(".faiss")
         faiss.write_index(store1.index, str(faiss_path))
 
         # Load should generate default mapping
@@ -261,8 +259,8 @@ class TestFAISSVectorStore:
         store = FAISSVectorStore(dimension=768)
         stats = store.get_stats()
 
-        assert stats['total_vectors'] == 0
-        assert stats['dimension'] == 768
+        assert stats["total_vectors"] == 0
+        assert stats["dimension"] == 768
 
     def test_get_stats_with_vectors(self, normalized_mock_embeddings):
         """Test getting stats from populated index."""
@@ -271,8 +269,8 @@ class TestFAISSVectorStore:
 
         stats = store.get_stats()
 
-        assert stats['total_vectors'] == 5
-        assert stats['dimension'] == 768
+        assert stats["total_vectors"] == 5
+        assert stats["dimension"] == 768
 
     def test_save_creates_directory(self, temp_dir, normalized_mock_embeddings):
         """Test that save creates directory if it doesn't exist."""
@@ -284,7 +282,7 @@ class TestFAISSVectorStore:
         store.save()
 
         assert index_path.parent.exists()
-        assert (index_path.with_suffix('.faiss')).exists()
+        assert (index_path.with_suffix(".faiss")).exists()
 
     def test_search_returns_correct_scores(self):
         """Test that search returns meaningful similarity scores."""
@@ -311,8 +309,13 @@ class TestFAISSVectorStore:
         store = FAISSVectorStore(dimension=3)
 
         chunk_ids = [100, 200, 300, 400, 500]
-        vectors = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0],
-                   [1.0, 1.0, 0.0], [0.0, 1.0, 1.0]]
+        vectors = [
+            [1.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0],
+            [0.0, 0.0, 1.0],
+            [1.0, 1.0, 0.0],
+            [0.0, 1.0, 1.0],
+        ]
 
         store.add_vectors(vectors, chunk_ids)
 

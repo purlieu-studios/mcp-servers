@@ -5,12 +5,11 @@ proactive context recommendations.
 """
 
 import ast
-import json
 import logging
 from collections import Counter, defaultdict
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -25,17 +24,14 @@ class ContextAnalyzer:
             workspace_state: WorkspaceState instance
         """
         self.workspace_state = workspace_state
-        self._dependency_cache: Dict[str, Set[str]] = {}
-        self._pattern_cache: Optional[Dict[str, Any]] = None
-        self._cache_timestamp: Optional[datetime] = None
+        self._dependency_cache: dict[str, set[str]] = {}
+        self._pattern_cache: dict[str, Any] | None = None
+        self._cache_timestamp: datetime | None = None
         self.CACHE_TTL_MINUTES = 5
 
     def get_recommendations(
-        self,
-        limit: int = 10,
-        include_dependencies: bool = True,
-        include_patterns: bool = True
-    ) -> List[Dict[str, Any]]:
+        self, limit: int = 10, include_dependencies: bool = True, include_patterns: bool = True
+    ) -> list[dict[str, Any]]:
         """Get file recommendations based on current context.
 
         Args:
@@ -53,22 +49,18 @@ class ContextAnalyzer:
         if not focus_files:
             return []
 
-        focus_paths = [f['path'] for f in focus_files]
+        focus_paths = [f["path"] for f in focus_files]
 
         # Score by recency (most recent = highest score)
         for idx, file_info in enumerate(focus_files):
-            path = file_info['path']
+            path = file_info["path"]
             recency_score = 1.0 - (idx / len(focus_files))  # 1.0 to 0.0
 
             if path not in recommendations:
-                recommendations[path] = {
-                    'file': path,
-                    'score': 0.0,
-                    'reasons': []
-                }
+                recommendations[path] = {"file": path, "score": 0.0, "reasons": []}
 
-            recommendations[path]['score'] += recency_score * 0.3
-            recommendations[path]['reasons'].append(
+            recommendations[path]["score"] += recency_score * 0.3
+            recommendations[path]["reasons"].append(
                 f"Recently accessed ({file_info.get('reason', 'unknown')})"
             )
 
@@ -77,45 +69,31 @@ class ContextAnalyzer:
             dep_recs = self._get_dependency_recommendations(focus_paths)
             for path, score in dep_recs.items():
                 if path not in recommendations:
-                    recommendations[path] = {
-                        'file': path,
-                        'score': 0.0,
-                        'reasons': []
-                    }
-                recommendations[path]['score'] += score * 0.4
-                recommendations[path]['reasons'].append('Related by imports/dependencies')
+                    recommendations[path] = {"file": path, "score": 0.0, "reasons": []}
+                recommendations[path]["score"] += score * 0.4
+                recommendations[path]["reasons"].append("Related by imports/dependencies")
 
         # Add pattern-based recommendations
         if include_patterns:
             pattern_recs = self._get_pattern_recommendations(focus_paths)
             for path, score in pattern_recs.items():
                 if path not in recommendations:
-                    recommendations[path] = {
-                        'file': path,
-                        'score': 0.0,
-                        'reasons': []
-                    }
-                recommendations[path]['score'] += score * 0.3
-                recommendations[path]['reasons'].append('Frequently accessed together')
+                    recommendations[path] = {"file": path, "score": 0.0, "reasons": []}
+                recommendations[path]["score"] += score * 0.3
+                recommendations[path]["reasons"].append("Frequently accessed together")
 
         # Sort by score and return top N
-        sorted_recs = sorted(
-            recommendations.values(),
-            key=lambda x: x['score'],
-            reverse=True
-        )
+        sorted_recs = sorted(recommendations.values(), key=lambda x: x["score"], reverse=True)
 
         # Filter out files that are already in top focus
         top_focus = set(focus_paths[:5])
-        filtered_recs = [r for r in sorted_recs if r['file'] not in top_focus]
+        filtered_recs = [r for r in sorted_recs if r["file"] not in top_focus]
 
         return filtered_recs[:limit]
 
     def get_related_files(
-        self,
-        file_path: str,
-        relationship_type: str = 'all'
-    ) -> List[Dict[str, Any]]:
+        self, file_path: str, relationship_type: str = "all"
+    ) -> list[dict[str, Any]]:
         """Find files related to a specific file.
 
         Args:
@@ -132,40 +110,32 @@ class ContextAnalyzer:
         related = {}
 
         # Import dependencies
-        if relationship_type in ('imports', 'all'):
+        if relationship_type in ("imports", "all"):
             imports = self._extract_imports(path)
             for imp in imports:
-                related[imp] = {
-                    'file': imp,
-                    'relationship': 'imports',
-                    'strength': 1.0
-                }
+                related[imp] = {"file": imp, "relationship": "imports", "strength": 1.0}
 
         # Reverse dependencies (files that import this one)
-        if relationship_type in ('imported_by', 'all'):
+        if relationship_type in ("imported_by", "all"):
             imported_by = self._find_reverse_dependencies(file_path)
             for imp in imported_by:
                 if imp not in related:
-                    related[imp] = {
-                        'file': imp,
-                        'relationship': 'imported_by',
-                        'strength': 0.9
-                    }
+                    related[imp] = {"file": imp, "relationship": "imported_by", "strength": 0.9}
 
         # Co-accessed files (files accessed in same sessions)
-        if relationship_type in ('co_accessed', 'all'):
+        if relationship_type in ("co_accessed", "all"):
             co_accessed = self._find_co_accessed_files(file_path)
             for co_file, score in co_accessed.items():
                 if co_file not in related:
                     related[co_file] = {
-                        'file': co_file,
-                        'relationship': 'co_accessed',
-                        'strength': score
+                        "file": co_file,
+                        "relationship": "co_accessed",
+                        "strength": score,
                     }
 
         return list(related.values())
 
-    def get_access_patterns(self) -> Dict[str, Any]:
+    def get_access_patterns(self) -> dict[str, Any]:
         """Analyze file access patterns.
 
         Returns:
@@ -175,20 +145,20 @@ class ContextAnalyzer:
 
         if not focus_files:
             return {
-                'total_files': 0,
-                'most_accessed': [],
-                'access_by_hour': {},
-                'average_session_files': 0
+                "total_files": 0,
+                "most_accessed": [],
+                "access_by_hour": {},
+                "average_session_files": 0,
             }
 
         # Count file access frequency
-        file_counts = Counter(f['path'] for f in focus_files)
+        file_counts = Counter(f["path"] for f in focus_files)
 
         # Analyze access times
         access_by_hour = defaultdict(int)
         for file_info in focus_files:
             try:
-                timestamp = datetime.fromisoformat(file_info['last_accessed'])
+                timestamp = datetime.fromisoformat(file_info["last_accessed"])
                 hour = timestamp.hour
                 access_by_hour[hour] += 1
             except (ValueError, KeyError):
@@ -196,21 +166,17 @@ class ContextAnalyzer:
 
         # Get most accessed files
         most_accessed = [
-            {'file': path, 'count': count}
-            for path, count in file_counts.most_common(10)
+            {"file": path, "count": count} for path, count in file_counts.most_common(10)
         ]
 
         return {
-            'total_files': len(file_counts),
-            'most_accessed': most_accessed,
-            'access_by_hour': dict(access_by_hour),
-            'average_session_files': len(focus_files) / max(1, len(file_counts))
+            "total_files": len(file_counts),
+            "most_accessed": most_accessed,
+            "access_by_hour": dict(access_by_hour),
+            "average_session_files": len(focus_files) / max(1, len(file_counts)),
         }
 
-    def build_dependency_map(
-        self,
-        root_path: Optional[Path] = None
-    ) -> Dict[str, List[str]]:
+    def build_dependency_map(self, root_path: Path | None = None) -> dict[str, list[str]]:
         """Build dependency map for Python files in workspace.
 
         Args:
@@ -225,7 +191,7 @@ class ContextAnalyzer:
         dependency_map = {}
 
         # Find all Python files
-        python_files = list(root_path.rglob('*.py'))
+        python_files = list(root_path.rglob("*.py"))
 
         for py_file in python_files:
             try:
@@ -239,10 +205,8 @@ class ContextAnalyzer:
         return dependency_map
 
     def predict_next_files(
-        self,
-        current_file: Optional[str] = None,
-        limit: int = 5
-    ) -> List[Dict[str, Any]]:
+        self, current_file: str | None = None, limit: int = 5
+    ) -> list[dict[str, Any]]:
         """Predict likely next files to access.
 
         Args:
@@ -254,39 +218,37 @@ class ContextAnalyzer:
         """
         if current_file:
             # Get related files to current file
-            related = self.get_related_files(current_file, relationship_type='all')
+            related = self.get_related_files(current_file, relationship_type="all")
 
             # Combine with access patterns
             patterns = self._get_pattern_cache()
             predictions = []
 
-            for rel in related[:limit * 2]:
-                confidence = rel['strength']
+            for rel in related[: limit * 2]:
+                confidence = rel["strength"]
 
                 # Boost confidence if file is frequently accessed
-                if rel['file'] in patterns.get('frequent_files', set()):
+                if rel["file"] in patterns.get("frequent_files", set()):
                     confidence *= 1.2
 
-                predictions.append({
-                    'file': rel['file'],
-                    'confidence': min(1.0, confidence),
-                    'reason': f"Related by {rel['relationship']}"
-                })
+                predictions.append(
+                    {
+                        "file": rel["file"],
+                        "confidence": min(1.0, confidence),
+                        "reason": f"Related by {rel['relationship']}",
+                    }
+                )
 
-            return sorted(predictions, key=lambda x: x['confidence'], reverse=True)[:limit]
+            return sorted(predictions, key=lambda x: x["confidence"], reverse=True)[:limit]
         else:
             # Use general recommendations
             recs = self.get_recommendations(limit=limit)
             return [
-                {
-                    'file': r['file'],
-                    'confidence': r['score'],
-                    'reason': ', '.join(r['reasons'])
-                }
+                {"file": r["file"], "confidence": r["score"], "reason": ", ".join(r["reasons"])}
                 for r in recs
             ]
 
-    def get_context_summary(self) -> Dict[str, Any]:
+    def get_context_summary(self) -> dict[str, Any]:
         """Get high-level context summary.
 
         Returns:
@@ -299,35 +261,32 @@ class ContextAnalyzer:
         # Analyze file types
         file_extensions = Counter()
         for file_info in focus_files:
-            path = Path(file_info['path'])
+            path = Path(file_info["path"])
             file_extensions[path.suffix] += 1
 
         # Analyze query servers
-        server_usage = Counter(q.get('server', 'unknown') for q in recent_queries)
+        server_usage = Counter(q.get("server", "unknown") for q in recent_queries)
 
         return {
-            'focus_files_count': len(focus_files),
-            'active_tasks_count': len(active_tasks),
-            'recent_queries_count': len(recent_queries),
-            'primary_file_types': dict(file_extensions.most_common(5)),
-            'server_usage': dict(server_usage),
-            'current_focus': focus_files[:5] if focus_files else [],
-            'recommendations_available': len(self.get_recommendations(limit=5))
+            "focus_files_count": len(focus_files),
+            "active_tasks_count": len(active_tasks),
+            "recent_queries_count": len(recent_queries),
+            "primary_file_types": dict(file_extensions.most_common(5)),
+            "server_usage": dict(server_usage),
+            "current_focus": focus_files[:5] if focus_files else [],
+            "recommendations_available": len(self.get_recommendations(limit=5)),
         }
 
     # Private helper methods
 
-    def _get_dependency_recommendations(
-        self,
-        focus_paths: List[str]
-    ) -> Dict[str, float]:
+    def _get_dependency_recommendations(self, focus_paths: list[str]) -> dict[str, float]:
         """Get recommendations based on file dependencies."""
         recommendations = {}
 
         for path in focus_paths[:10]:  # Limit to top 10 focus files
             try:
                 file_path = Path(path)
-                if not file_path.exists() or file_path.suffix != '.py':
+                if not file_path.exists() or file_path.suffix != ".py":
                     continue
 
                 # Get imports from this file
@@ -350,16 +309,13 @@ class ContextAnalyzer:
 
         return recommendations
 
-    def _get_pattern_recommendations(
-        self,
-        focus_paths: List[str]
-    ) -> Dict[str, float]:
+    def _get_pattern_recommendations(self, focus_paths: list[str]) -> dict[str, float]:
         """Get recommendations based on access patterns."""
         patterns = self._get_pattern_cache()
         recommendations = {}
 
         # Files frequently accessed together
-        co_access = patterns.get('co_access_map', {})
+        co_access = patterns.get("co_access_map", {})
 
         for path in focus_paths[:5]:  # Top 5 focus files
             if path in co_access:
@@ -370,7 +326,7 @@ class ContextAnalyzer:
 
         return recommendations
 
-    def _extract_imports(self, file_path: Path) -> Set[str]:
+    def _extract_imports(self, file_path: Path) -> set[str]:
         """Extract import statements from Python file."""
         if str(file_path) in self._dependency_cache:
             return self._dependency_cache[str(file_path)]
@@ -378,7 +334,7 @@ class ContextAnalyzer:
         imports = set()
 
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, encoding="utf-8") as f:
                 tree = ast.parse(f.read(), filename=str(file_path))
 
             for node in ast.walk(tree):
@@ -399,18 +355,14 @@ class ContextAnalyzer:
             logger.debug(f"Error parsing {file_path}: {e}")
             return set()
 
-    def _resolve_imports(
-        self,
-        imports: Set[str],
-        source_file: Path
-    ) -> Set[str]:
+    def _resolve_imports(self, imports: set[str], source_file: Path) -> set[str]:
         """Resolve import module names to file paths."""
         resolved = set()
 
         for imp in imports:
             # Convert module path to file path
             # e.g., "foo.bar.baz" -> "foo/bar/baz.py"
-            module_path = imp.replace('.', '/')
+            module_path = imp.replace(".", "/")
 
             # Try different resolutions
             candidates = [
@@ -427,7 +379,7 @@ class ContextAnalyzer:
 
         return resolved
 
-    def _find_reverse_dependencies(self, file_path: str) -> Set[str]:
+    def _find_reverse_dependencies(self, file_path: str) -> set[str]:
         """Find files that import the given file."""
         imported_by = set()
         target_path = Path(file_path)
@@ -437,8 +389,8 @@ class ContextAnalyzer:
 
         for file_info in focus_files:
             try:
-                path = Path(file_info['path'])
-                if not path.exists() or path.suffix != '.py':
+                path = Path(file_info["path"])
+                if not path.exists() or path.suffix != ".py":
                     continue
 
                 imports = self._extract_imports(path)
@@ -451,14 +403,14 @@ class ContextAnalyzer:
 
         return imported_by
 
-    def _find_co_accessed_files(self, file_path: str) -> Dict[str, float]:
+    def _find_co_accessed_files(self, file_path: str) -> dict[str, float]:
         """Find files frequently accessed together with given file."""
         patterns = self._get_pattern_cache()
-        co_access = patterns.get('co_access_map', {})
+        co_access = patterns.get("co_access_map", {})
 
         return co_access.get(file_path, {})
 
-    def _get_pattern_cache(self) -> Dict[str, Any]:
+    def _get_pattern_cache(self) -> dict[str, Any]:
         """Get or build pattern cache."""
         # Check if cache is still valid
         if self._pattern_cache and self._cache_timestamp:
@@ -473,12 +425,12 @@ class ContextAnalyzer:
         co_access_map = defaultdict(lambda: defaultdict(float))
 
         for i, file1 in enumerate(focus_files):
-            path1 = file1['path']
-            time1 = datetime.fromisoformat(file1['last_accessed'])
+            path1 = file1["path"]
+            time1 = datetime.fromisoformat(file1["last_accessed"])
 
-            for file2 in focus_files[i+1:i+11]:  # Look at next 10 files
-                path2 = file2['path']
-                time2 = datetime.fromisoformat(file2['last_accessed'])
+            for file2 in focus_files[i + 1 : i + 11]:  # Look at next 10 files
+                path2 = file2["path"]
+                time2 = datetime.fromisoformat(file2["last_accessed"])
 
                 # Calculate time proximity score
                 time_diff = abs((time1 - time2).total_seconds())
@@ -488,13 +440,13 @@ class ContextAnalyzer:
                     co_access_map[path2][path1] += score
 
         # Get frequently accessed files
-        file_counts = Counter(f['path'] for f in focus_files)
+        file_counts = Counter(f["path"] for f in focus_files)
         frequent_files = {path for path, count in file_counts.items() if count >= 3}
 
         self._pattern_cache = {
-            'co_access_map': {k: dict(v) for k, v in co_access_map.items()},
-            'frequent_files': frequent_files,
-            'total_analyzed': len(focus_files)
+            "co_access_map": {k: dict(v) for k, v in co_access_map.items()},
+            "frequent_files": frequent_files,
+            "total_analyzed": len(focus_files),
         }
         self._cache_timestamp = datetime.now()
 

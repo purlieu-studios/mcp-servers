@@ -7,14 +7,13 @@ This example shows how to use the RAG components programmatically
 import logging
 from pathlib import Path
 
-from src.embeddings import OllamaEmbedder
 from src.document_processor import DocumentProcessor
+from src.embeddings import OllamaEmbedder
 from src.index_manager import IndexManager
 
 # Set up logging
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 
 logger = logging.getLogger(__name__)
@@ -31,15 +30,13 @@ def main():
     # Initialize embedder
     logger.info("Connecting to Ollama...")
     embedder = OllamaEmbedder(
-        base_url="http://localhost:11434",
-        model="nomic-embed-text",
-        batch_size=32
+        base_url="http://localhost:11434", model="nomic-embed-text", batch_size=32
     )
 
     # Initialize document processor
     doc_processor = DocumentProcessor(
         file_types=[".txt", ".md", ".py", ".js", ".ts"],
-        exclude_patterns=["node_modules/**", ".git/**", "__pycache__/**"]
+        exclude_patterns=["node_modules/**", ".git/**", "__pycache__/**"],
     )
 
     # Create index manager
@@ -50,7 +47,7 @@ def main():
         embedder=embedder,
         doc_processor=doc_processor,
         chunk_size=512,
-        overlap=50
+        overlap=50,
     )
 
     # Index directory
@@ -71,10 +68,7 @@ def main():
         logger.info(f"{'='*60}")
 
         results = index_manager.query(
-            query_text=query_text,
-            top_k=3,
-            semantic_weight=0.7,
-            keyword_weight=0.3
+            query_text=query_text, top_k=3, semantic_weight=0.7, keyword_weight=0.3
         )
 
         if not results:

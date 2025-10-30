@@ -1,11 +1,10 @@
 """Document loading and processing for various file types."""
 
-import os
-import logging
-from pathlib import Path
-from typing import List, Optional, Set
-from dataclasses import dataclass
 import fnmatch
+import logging
+import os
+from dataclasses import dataclass
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -13,6 +12,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class Document:
     """Represents a loaded document."""
+
     content: str
     file_path: str
     file_type: str
@@ -22,11 +22,11 @@ class Document:
 class DocumentProcessor:
     """Loads and processes documents from directories."""
 
-    def __init__(self, file_types: List[str], exclude_patterns: List[str]):
+    def __init__(self, file_types: list[str], exclude_patterns: list[str]):
         self.file_types = set(file_types)
         self.exclude_patterns = exclude_patterns
 
-    def load_directory(self, directory: str) -> List[Document]:
+    def load_directory(self, directory: str) -> list[Document]:
         """Load all supported documents from a directory."""
         directory_path = Path(directory).expanduser().resolve()
 
@@ -44,7 +44,7 @@ class DocumentProcessor:
         logger.info(f"Loaded {len(documents)} documents from {directory}")
         return documents
 
-    def load_file(self, file_path: str) -> Optional[Document]:
+    def load_file(self, file_path: str) -> Document | None:
         """Load a single file."""
         path = Path(file_path)
 
@@ -58,20 +58,17 @@ class DocumentProcessor:
         try:
             # Try UTF-8 first, fallback to latin-1
             try:
-                content = path.read_text(encoding='utf-8')
+                content = path.read_text(encoding="utf-8")
             except UnicodeDecodeError:
-                content = path.read_text(encoding='latin-1')
+                content = path.read_text(encoding="latin-1")
 
             metadata = {
-                'size': path.stat().st_size,
-                'modified': path.stat().st_mtime,
+                "size": path.stat().st_size,
+                "modified": path.stat().st_mtime,
             }
 
             return Document(
-                content=content,
-                file_path=str(path),
-                file_type=path.suffix,
-                metadata=metadata
+                content=content, file_path=str(path), file_type=path.suffix, metadata=metadata
             )
 
         except Exception as e:
@@ -99,7 +96,7 @@ class DocumentProcessor:
         """Check if a path should be excluded based on patterns."""
         try:
             relative = path.relative_to(base_path)
-            relative_str = str(relative).replace('\\', '/')
+            relative_str = str(relative).replace("\\", "/")
 
             for pattern in self.exclude_patterns:
                 # Check full path match
@@ -107,8 +104,8 @@ class DocumentProcessor:
                     return True
 
                 # For directory patterns (ending with /), check if any path component matches
-                if pattern.endswith('/'):
-                    dir_pattern = pattern.rstrip('/')
+                if pattern.endswith("/"):
+                    dir_pattern = pattern.rstrip("/")
                     # Check if the path itself or any parent matches the directory name
                     if path.name == dir_pattern:
                         return True

@@ -1,12 +1,12 @@
 """Text chunking strategies for document processing."""
 
-from typing import List
 from dataclasses import dataclass
 
 
 @dataclass
 class Chunk:
     """Represents a text chunk with metadata."""
+
     text: str
     start_char: int
     end_char: int
@@ -21,7 +21,7 @@ class RecursiveChunker:
         # Separators in order of preference
         self.separators = ["\n\n", "\n", ". ", "! ", "? ", "; ", ", ", " ", ""]
 
-    def chunk(self, text: str) -> List[Chunk]:
+    def chunk(self, text: str) -> list[Chunk]:
         """Split text into overlapping chunks."""
         if not text:
             return []
@@ -34,21 +34,13 @@ class RecursiveChunker:
 
             # If this is the last chunk, take everything
             if end >= len(text):
-                chunks.append(Chunk(
-                    text=text[start:],
-                    start_char=start,
-                    end_char=len(text)
-                ))
+                chunks.append(Chunk(text=text[start:], start_char=start, end_char=len(text)))
                 break
 
             # Try to find a good breaking point
             chunk_end = self._find_break_point(text, start, end)
 
-            chunks.append(Chunk(
-                text=text[start:chunk_end],
-                start_char=start,
-                end_char=chunk_end
-            ))
+            chunks.append(Chunk(text=text[start:chunk_end], start_char=start, end_char=chunk_end))
 
             # Next chunk starts with overlap
             start = chunk_end - self.overlap
@@ -74,7 +66,7 @@ class RecursiveChunker:
         return end
 
 
-def chunk_text(text: str, chunk_size: int = 512, overlap: int = 50) -> List[Chunk]:
+def chunk_text(text: str, chunk_size: int = 512, overlap: int = 50) -> list[Chunk]:
     """Convenience function to chunk text."""
     chunker = RecursiveChunker(chunk_size, overlap)
     return chunker.chunk(text)

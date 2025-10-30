@@ -1,9 +1,8 @@
 """Tests for LINQ query analyzer."""
 
 import pytest
-from pathlib import Path
-from src.analyzers.linq_analyzer import LinqAnalyzer
 
+from src.analyzers.linq_analyzer import LinqAnalyzer
 
 pytestmark = pytest.mark.unit
 

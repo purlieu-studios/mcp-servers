@@ -1,9 +1,8 @@
 """Tests for Entity analyzer."""
 
 import pytest
-from pathlib import Path
-from src.analyzers.entity_analyzer import EntityAnalyzer
 
+from src.analyzers.entity_analyzer import EntityAnalyzer
 
 pytestmark = pytest.mark.unit
 
@@ -145,7 +144,7 @@ class TestEntityAnalyzer:
     async def test_multiple_entities_in_file(self, analyzer, temp_dir):
         """Test analyzing file with multiple entities."""
         file_path = temp_dir / "MultipleEntities.cs"
-        file_path.write_text('''
+        file_path.write_text("""
 using System.ComponentModel.DataAnnotations;
 
 namespace MyApp.Models
@@ -164,7 +163,7 @@ namespace MyApp.Models
         public int UserId { get; set; }
     }
 }
-''')
+""")
 
         entities = await analyzer.analyze(file_path)
 
@@ -177,7 +176,7 @@ namespace MyApp.Models
     async def test_detect_collection_navigation(self, analyzer, temp_dir):
         """Test detecting collection navigation properties."""
         file_path = temp_dir / "EntityWithCollection.cs"
-        file_path.write_text('''
+        file_path.write_text("""
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
@@ -192,7 +191,7 @@ namespace MyApp.Models
         public ICollection<Order> Orders { get; set; }
     }
 }
-''')
+""")
 
         entities = await analyzer.analyze(file_path)
 

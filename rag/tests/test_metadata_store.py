@@ -1,7 +1,9 @@
 """Tests for SQLite metadata store."""
-import pytest
-from pathlib import Path
+
 import time
+
+import pytest
+
 from src.metadata_store import MetadataStore
 
 
@@ -44,7 +46,7 @@ class TestMetadataStore:
             file_type="txt",
             content="Hello world",
             size=1024,
-            modified=time.time()
+            modified=time.time(),
         )
 
         assert file_id > 0
@@ -52,9 +54,9 @@ class TestMetadataStore:
         # Verify file was added
         file_info = store.get_file_by_path("/test/file.txt")
         assert file_info is not None
-        assert file_info['path'] == "/test/file.txt"
-        assert file_info['file_type'] == "txt"
-        assert file_info['size'] == 1024
+        assert file_info["path"] == "/test/file.txt"
+        assert file_info["file_type"] == "txt"
+        assert file_info["size"] == 1024
 
     def test_add_file_duplicate_same_content(self, store):
         """Test adding same file with same content."""
@@ -91,11 +93,7 @@ class TestMetadataStore:
         file_id = store.add_file("/test/file.txt", "txt", "test", 100, time.time())
 
         chunk_id = store.add_chunk(
-            file_id=file_id,
-            text="This is a test chunk",
-            start_char=0,
-            end_char=20,
-            embedding_id=0
+            file_id=file_id, text="This is a test chunk", start_char=0, end_char=20, embedding_id=0
         )
 
         assert chunk_id > 0
@@ -103,10 +101,10 @@ class TestMetadataStore:
         # Verify chunk was added
         chunk = store.get_chunk(chunk_id)
         assert chunk is not None
-        assert chunk['text'] == "This is a test chunk"
-        assert chunk['start_char'] == 0
-        assert chunk['end_char'] == 20
-        assert chunk['file_id'] == file_id
+        assert chunk["text"] == "This is a test chunk"
+        assert chunk["start_char"] == 0
+        assert chunk["end_char"] == 20
+        assert chunk["file_id"] == file_id
 
     def test_add_multiple_chunks(self, store):
         """Test adding multiple chunks."""
@@ -114,14 +112,14 @@ class TestMetadataStore:
 
         chunk_ids = []
         for i in range(5):
-            chunk_id = store.add_chunk(file_id, f"chunk {i}", i*10, (i+1)*10, i)
+            chunk_id = store.add_chunk(file_id, f"chunk {i}", i * 10, (i + 1) * 10, i)
             chunk_ids.append(chunk_id)
 
         # All chunks should have unique IDs
         assert len(set(chunk_ids)) == 5
 
         stats = store.get_stats()
-        assert stats['chunk_count'] == 5
+        assert stats["chunk_count"] == 5
 
     def test_get_chunk(self, store):
         """Test retrieving a chunk."""
@@ -131,9 +129,9 @@ class TestMetadataStore:
         chunk = store.get_chunk(chunk_id)
 
         assert chunk is not None
-        assert chunk['id'] == chunk_id
-        assert chunk['text'] == "test chunk"
-        assert chunk['file_path'] == "/test/file.txt"
+        assert chunk["id"] == chunk_id
+        assert chunk["text"] == "test chunk"
+        assert chunk["file_path"] == "/test/file.txt"
 
     def test_get_chunk_nonexistent(self, store):
         """Test retrieving nonexistent chunk."""
@@ -156,7 +154,7 @@ class TestMetadataStore:
             # Results should be chunk IDs and scores
             for chunk_id, score in results:
                 chunk = store.get_chunk(chunk_id)
-                assert "python" in chunk['text'].lower()
+                assert "python" in chunk["text"].lower()
         except Exception:
             # FTS5 may have different behavior on different platforms
             pytest.skip("FTS5 query format not supported on this platform")
@@ -176,7 +174,7 @@ class TestMetadataStore:
 
         # Add many chunks with same word
         for i in range(20):
-            store.add_chunk(file_id, f"test chunk {i}", i*20, (i+1)*20, i)
+            store.add_chunk(file_id, f"test chunk {i}", i * 20, (i + 1) * 20, i)
 
         # Search with limit
         try:
@@ -207,8 +205,8 @@ class TestMetadataStore:
         file_info = store.get_file_by_path("/test/file.txt")
 
         assert file_info is not None
-        assert file_info['id'] == file_id
-        assert file_info['path'] == "/test/file.txt"
+        assert file_info["id"] == file_id
+        assert file_info["path"] == "/test/file.txt"
 
     def test_get_file_by_path_nonexistent(self, store):
         """Test retrieving nonexistent file."""
@@ -229,7 +227,7 @@ class TestMetadataStore:
         files = store.get_all_files()
 
         assert len(files) == 3
-        paths = [f['path'] for f in files]
+        paths = [f["path"] for f in files]
         assert "/test/file1.txt" in paths
         assert "/test/file2.py" in paths
         assert "/test/file3.md" in paths
@@ -241,7 +239,7 @@ class TestMetadataStore:
 
         # Verify file and chunk exist
         assert store.get_file_by_path("/test/file.txt") is not None
-        assert store.get_stats()['chunk_count'] == 1
+        assert store.get_stats()["chunk_count"] == 1
         assert store.get_chunk(chunk_id) is not None
 
         # Delete file
@@ -251,7 +249,7 @@ class TestMetadataStore:
         assert store.get_file_by_path("/test/file.txt") is None
         # Chunk count may not be 0 immediately due to FTS triggers
         stats = store.get_stats()
-        assert stats['chunk_count'] == 0
+        assert stats["chunk_count"] == 0
 
     def test_delete_nonexistent_file(self, store):
         """Test deleting nonexistent file."""
@@ -264,7 +262,7 @@ class TestMetadataStore:
 
         chunk_ids = []
         for i in range(5):
-            chunk_id = store.add_chunk(file_id, f"chunk {i}", i*10, (i+1)*10, i)
+            chunk_id = store.add_chunk(file_id, f"chunk {i}", i * 10, (i + 1) * 10, i)
             chunk_ids.append(chunk_id)
 
         store.delete_file("/test/file.txt")
@@ -277,9 +275,9 @@ class TestMetadataStore:
         """Test getting stats from empty database."""
         stats = store.get_stats()
 
-        assert stats['file_count'] == 0
-        assert stats['chunk_count'] == 0
-        assert stats['total_size_bytes'] == 0
+        assert stats["file_count"] == 0
+        assert stats["chunk_count"] == 0
+        assert stats["total_size_bytes"] == 0
 
     def test_get_stats_with_data(self, store):
         """Test getting stats with data."""
@@ -292,9 +290,9 @@ class TestMetadataStore:
 
         stats = store.get_stats()
 
-        assert stats['file_count'] == 2
-        assert stats['chunk_count'] == 3
-        assert stats['total_size_bytes'] == 300
+        assert stats["file_count"] == 2
+        assert stats["chunk_count"] == 3
+        assert stats["total_size_bytes"] == 300
 
     def test_fts_trigger_on_insert(self, store):
         """Test that FTS table is updated on chunk insert."""
@@ -315,7 +313,7 @@ class TestMetadataStore:
 
         # Delete chunk directly
         cursor = store.conn.cursor()
-        cursor.execute('DELETE FROM chunks WHERE id = ?', (chunk_id,))
+        cursor.execute("DELETE FROM chunks WHERE id = ?", (chunk_id,))
         store.conn.commit()
 
         # Should not be found in FTS
@@ -330,12 +328,12 @@ class TestMetadataStore:
         # Add file with content1
         file_id1 = store.add_file("/test/file.txt", "txt", "content one", 100, time.time())
         file1 = store.get_file_by_path("/test/file.txt")
-        hash1 = file1['hash']
+        hash1 = file1["hash"]
 
         # Add same file with different content
         file_id2 = store.add_file("/test/file.txt", "txt", "content two", 100, time.time())
         file2 = store.get_file_by_path("/test/file.txt")
-        hash2 = file2['hash']
+        hash2 = file2["hash"]
 
         # File ID should be same, hash should be different
         assert file_id1 == file_id2
@@ -350,14 +348,14 @@ class TestMetadataStore:
         file_info = store.get_file_by_path("/test/file.txt")
 
         # indexed_at should be within reasonable range
-        assert before <= file_info['indexed_at'] <= after
+        assert before <= file_info["indexed_at"] <= after
 
     def test_updated_indexed_at_on_change(self, store):
         """Test that indexed_at updates when file changes."""
         # Add initial file
         store.add_file("/test/file.txt", "txt", "content1", 100, time.time())
         file1 = store.get_file_by_path("/test/file.txt")
-        indexed_at1 = file1['indexed_at']
+        indexed_at1 = file1["indexed_at"]
 
         # Wait a bit to ensure timestamp difference
         time.sleep(1)
@@ -365,7 +363,7 @@ class TestMetadataStore:
         # Update file
         store.add_file("/test/file.txt", "txt", "content2", 100, time.time())
         file2 = store.get_file_by_path("/test/file.txt")
-        indexed_at2 = file2['indexed_at']
+        indexed_at2 = file2["indexed_at"]
 
         # indexed_at should be updated
         assert indexed_at2 >= indexed_at1
@@ -391,7 +389,7 @@ class TestMetadataStore:
         chunk_id = store.add_chunk(file_id, special_text, 0, len(special_text), 0)
 
         chunk = store.get_chunk(chunk_id)
-        assert chunk['text'] == special_text
+        assert chunk["text"] == special_text
 
     def test_search_with_special_query(self, store):
         """Test search with special characters in query."""

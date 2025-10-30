@@ -10,7 +10,8 @@
       "Bash(gh run view:*)",
       "Bash(gh run watch:*)",
       "Bash(find:*)",
-      "Bash(python -m pip install:*)"
+      "Bash(python -m pip install:*)",
+      "Bash(python -m pre_commit run:*)"
     ],
     "deny": [],
     "ask": []

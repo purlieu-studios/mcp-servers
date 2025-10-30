@@ -1,9 +1,10 @@
 """Pytest configuration and shared fixtures for Code Analysis tests."""
-import os
-import tempfile
+
 import shutil
+import tempfile
+from collections.abc import Generator
 from pathlib import Path
-from typing import Generator
+
 import pytest
 
 
@@ -160,7 +161,7 @@ class GodClass:
 def sample_javascript(temp_dir) -> Path:
     """Create a JavaScript file for testing."""
     file_path = temp_dir / "sample.js"
-    file_path.write_text('''
+    file_path.write_text("""
 function calculateTotal(items) {
     return items.reduce((sum, item) => sum + item.price, 0);
 }
@@ -188,7 +189,7 @@ const processData = (data) => {
     return data.filter(item => item.active)
                .map(item => item.value);
 };
-''')
+""")
     return file_path
 
 
@@ -196,7 +197,7 @@ const processData = (data) => {
 def sample_typescript(temp_dir) -> Path:
     """Create a TypeScript file for testing."""
     file_path = temp_dir / "sample.ts"
-    file_path.write_text('''
+    file_path.write_text("""
 interface User {
     id: number;
     name: string;
@@ -219,7 +220,7 @@ function validateEmail(email: string): boolean {
     const regex = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;
     return regex.test(email);
 }
-''')
+""")
     return file_path
 
 
@@ -227,7 +228,7 @@ function validateEmail(email: string): boolean {
 def sample_csharp(temp_dir) -> Path:
     """Create a C# file for testing."""
     file_path = temp_dir / "sample.cs"
-    file_path.write_text('''
+    file_path.write_text("""
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -267,7 +268,7 @@ namespace MyApp
         }
     }
 }
-''')
+""")
     return file_path
 
 
@@ -275,7 +276,7 @@ namespace MyApp
 def sample_python_imports(temp_dir) -> Path:
     """Create a Python file with various imports."""
     file_path = temp_dir / "imports.py"
-    file_path.write_text('''
+    file_path.write_text("""
 import os
 import sys
 from typing import List, Dict
@@ -289,7 +290,7 @@ from ..utils import helper
 
 def process_data():
     pass
-''')
+""")
     return file_path
 
 
@@ -300,7 +301,7 @@ def sample_project_structure(temp_dir) -> Path:
     project.mkdir()
 
     # Create auth.py
-    (project / "auth.py").write_text('''
+    (project / "auth.py").write_text("""
 import bcrypt
 from .models import User
 
@@ -309,10 +310,10 @@ def hash_password(password: str) -> str:
 
 def verify_password(password: str, hashed: str) -> bool:
     return bcrypt.checkpw(password.encode(), hashed.encode())
-''')
+""")
 
     # Create models.py
-    (project / "models.py").write_text('''
+    (project / "models.py").write_text("""
 from dataclasses import dataclass
 
 @dataclass
@@ -320,16 +321,16 @@ class User:
     id: int
     username: str
     email: str
-''')
+""")
 
     # Create database.py
-    (project / "database.py").write_text('''
+    (project / "database.py").write_text("""
 import sqlite3
 from .models import User
 
 class Database:
     def __init__(self, path: str):
         self.conn = sqlite3.connect(path)
-''')
+""")
 
     return project

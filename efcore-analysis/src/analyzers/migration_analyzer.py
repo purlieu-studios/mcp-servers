@@ -1,19 +1,14 @@
 """EF Core migration generator."""
 
-import asyncio
-from pathlib import Path
-from typing import Any, Dict, List
 from datetime import datetime
+from pathlib import Path
 
 
 class MigrationAnalyzer:
     """Generate EF Core migrations."""
 
     async def generate_migration(
-        self,
-        old_model_path: Path,
-        new_model_path: Path,
-        migration_name: str
+        self, old_model_path: Path, new_model_path: Path, migration_name: str
     ) -> str:
         """Generate migration code based on model changes."""
         if not old_model_path.exists():
@@ -22,8 +17,8 @@ class MigrationAnalyzer:
             raise FileNotFoundError(f"New model file not found: {new_model_path}")
 
         # Read both models
-        old_content = old_model_path.read_text(encoding='utf-8')
-        new_content = new_model_path.read_text(encoding='utf-8')
+        old_content = old_model_path.read_text(encoding="utf-8")
+        new_content = new_model_path.read_text(encoding="utf-8")
 
         # Detect changes (simplified)
         changes = self._detect_changes(old_content, new_content)
@@ -33,7 +28,7 @@ class MigrationAnalyzer:
 
         return migration_code
 
-    def _detect_changes(self, old_content: str, new_content: str) -> Dict[str, List[str]]:
+    def _detect_changes(self, old_content: str, new_content: str) -> dict[str, list[str]]:
         """Detect changes between old and new models."""
         import re
 
@@ -42,19 +37,19 @@ class MigrationAnalyzer:
             "removed_properties": [],
             "modified_properties": [],
             "added_indexes": [],
-            "removed_indexes": []
+            "removed_indexes": [],
         }
 
         # Extract properties from both
-        old_props = set(re.findall(r'public\s+\w+\s+(\w+)\s*{\s*get;\s*set;\s*}', old_content))
-        new_props = set(re.findall(r'public\s+\w+\s+(\w+)\s*{\s*get;\s*set;\s*}', new_content))
+        old_props = set(re.findall(r"public\s+\w+\s+(\w+)\s*{\s*get;\s*set;\s*}", old_content))
+        new_props = set(re.findall(r"public\s+\w+\s+(\w+)\s*{\s*get;\s*set;\s*}", new_content))
 
         changes["added_properties"] = list(new_props - old_props)
         changes["removed_properties"] = list(old_props - new_props)
 
         return changes
 
-    def _generate_migration_code(self, migration_name: str, changes: Dict[str, List[str]]) -> str:
+    def _generate_migration_code(self, migration_name: str, changes: dict[str, list[str]]) -> str:
         """Generate the migration class code."""
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
 
@@ -63,33 +58,33 @@ class MigrationAnalyzer:
 
         # Generate operations for added properties
         for prop in changes["added_properties"]:
-            up_operations.append(f'''
+            up_operations.append(f"""
             migrationBuilder.AddColumn<string>(
                 name: "{prop}",
                 table: "YourTable",
                 type: "nvarchar(max)",
-                nullable: true);''')
+                nullable: true);""")
 
-            down_operations.append(f'''
+            down_operations.append(f"""
             migrationBuilder.DropColumn(
                 name: "{prop}",
-                table: "YourTable");''')
+                table: "YourTable");""")
 
         # Generate operations for removed properties
         for prop in changes["removed_properties"]:
-            up_operations.append(f'''
+            up_operations.append(f"""
             migrationBuilder.DropColumn(
                 name: "{prop}",
-                table: "YourTable");''')
+                table: "YourTable");""")
 
-            down_operations.append(f'''
+            down_operations.append(f"""
             migrationBuilder.AddColumn<string>(
                 name: "{prop}",
                 table: "YourTable",
                 type: "nvarchar(max)",
-                nullable: true);''')
+                nullable: true);""")
 
-        migration_code = f'''using Microsoft.EntityFrameworkCore.Migrations;
+        migration_code = f"""using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace YourNamespace.Migrations
 {{
@@ -107,6 +102,6 @@ namespace YourNamespace.Migrations
         }}
     }}
 }}
-'''
+"""
 
         return migration_code

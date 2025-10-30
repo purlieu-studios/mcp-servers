@@ -1,9 +1,8 @@
 """Tests for DbContext analyzer."""
 
 import pytest
-from pathlib import Path
-from src.analyzers.dbcontext_analyzer import DbContextAnalyzer
 
+from src.analyzers.dbcontext_analyzer import DbContextAnalyzer
 
 pytestmark = pytest.mark.unit
 
@@ -87,7 +86,7 @@ class TestDbContextAnalyzer:
     async def test_empty_dbcontext(self, analyzer, temp_dir):
         """Test analyzing empty DbContext."""
         file_path = temp_dir / "EmptyContext.cs"
-        file_path.write_text('''
+        file_path.write_text("""
 using Microsoft.EntityFrameworkCore;
 
 namespace MyApp.Data
@@ -96,7 +95,7 @@ namespace MyApp.Data
     {
     }
 }
-''')
+""")
 
         result = await analyzer.analyze(file_path)
 
@@ -107,7 +106,7 @@ namespace MyApp.Data
     async def test_dbcontext_with_onconfiguring(self, analyzer, temp_dir):
         """Test DbContext with OnConfiguring method."""
         file_path = temp_dir / "ConfigContext.cs"
-        file_path.write_text('''
+        file_path.write_text("""
 using Microsoft.EntityFrameworkCore;
 
 namespace MyApp.Data
@@ -122,7 +121,7 @@ namespace MyApp.Data
         }
     }
 }
-''')
+""")
 
         result = await analyzer.analyze(file_path)
 

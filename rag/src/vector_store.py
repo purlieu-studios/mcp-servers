@@ -3,9 +3,9 @@
 import logging
 import pickle
 from pathlib import Path
-from typing import List, Tuple, Optional
-import numpy as np
+
 import faiss
+import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -13,14 +13,14 @@ logger = logging.getLogger(__name__)
 class FAISSVectorStore:
     """Vector store using FAISS for efficient similarity search."""
 
-    def __init__(self, dimension: int, index_path: Optional[Path] = None):
+    def __init__(self, dimension: int, index_path: Path | None = None):
         self.dimension = dimension
         self.index_path = index_path
         self.index = None
         self.id_mapping = []  # Maps FAISS index positions to chunk IDs
 
         # Check if index file exists (with .faiss extension)
-        if index_path and index_path.with_suffix('.faiss').exists():
+        if index_path and index_path.with_suffix(".faiss").exists():
             self.load()
         else:
             self._create_index()
@@ -32,7 +32,7 @@ class FAISSVectorStore:
         self.id_mapping = []
         logger.info(f"Created new FAISS index with dimension {self.dimension}")
 
-    def add_vectors(self, vectors: List[List[float]], chunk_ids: List[int]):
+    def add_vectors(self, vectors: list[list[float]], chunk_ids: list[int]):
         """Add vectors to the index."""
         if not vectors:
             return
@@ -49,7 +49,7 @@ class FAISSVectorStore:
 
         logger.debug(f"Added {len(vectors)} vectors to index")
 
-    def search(self, query_vector: List[float], top_k: int = 5) -> List[Tuple[int, float]]:
+    def search(self, query_vector: list[float], top_k: int = 5) -> list[tuple[int, float]]:
         """Search for similar vectors.
 
         Returns:
@@ -68,7 +68,7 @@ class FAISSVectorStore:
 
         # Convert to chunk IDs and scores
         results = []
-        for idx, score in zip(indices[0], distances[0]):
+        for idx, score in zip(indices[0], distances[0], strict=False):
             if idx < len(self.id_mapping):
                 chunk_id = self.id_mapping[idx]
                 results.append((chunk_id, float(score)))
@@ -84,12 +84,12 @@ class FAISSVectorStore:
         self.index_path.parent.mkdir(parents=True, exist_ok=True)
 
         # Save FAISS index
-        faiss_path = self.index_path.with_suffix('.faiss')
+        faiss_path = self.index_path.with_suffix(".faiss")
         faiss.write_index(self.index, str(faiss_path))
 
         # Save ID mapping
-        mapping_path = self.index_path.with_suffix('.mapping')
-        with open(mapping_path, 'wb') as f:
+        mapping_path = self.index_path.with_suffix(".mapping")
+        with open(mapping_path, "wb") as f:
             pickle.dump(self.id_mapping, f)
 
         logger.info(f"Saved vector store to {self.index_path}")
@@ -103,7 +103,7 @@ class FAISSVectorStore:
 
         try:
             # Load FAISS index
-            faiss_path = self.index_path.with_suffix('.faiss')
+            faiss_path = self.index_path.with_suffix(".faiss")
             if not faiss_path.exists():
                 logger.warning(f"FAISS index not found: {faiss_path}, creating new index")
                 self._create_index()
@@ -112,9 +112,9 @@ class FAISSVectorStore:
             self.index = faiss.read_index(str(faiss_path))
 
             # Load ID mapping
-            mapping_path = self.index_path.with_suffix('.mapping')
+            mapping_path = self.index_path.with_suffix(".mapping")
             if mapping_path.exists():
-                with open(mapping_path, 'rb') as f:
+                with open(mapping_path, "rb") as f:
                     self.id_mapping = pickle.load(f)
             else:
                 self.id_mapping = list(range(self.index.ntotal))
@@ -132,6 +132,6 @@ class FAISSVectorStore:
     def get_stats(self) -> dict:
         """Get statistics about the index."""
         return {
-            'total_vectors': self.index.ntotal if self.index else 0,
-            'dimension': self.dimension,
+            "total_vectors": self.index.ntotal if self.index else 0,
+            "dimension": self.dimension,
         }

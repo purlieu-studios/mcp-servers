@@ -1,17 +1,17 @@
 """Tests for context analyzer module."""
 
-import pytest
-import tempfile
-from pathlib import Path
-from datetime import datetime, timedelta
-from unittest.mock import Mock, MagicMock
 import sys
+import tempfile
+from datetime import datetime, timedelta
+from pathlib import Path
+from unittest.mock import Mock
+
+import pytest
 
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.context_analyzer import ContextAnalyzer
-
 
 pytestmark = pytest.mark.unit
 
@@ -61,25 +61,23 @@ class TestContextAnalyzer:
         """Test recommendations based on focus files."""
         now = datetime.now()
         focus_files = [
+            {"path": "/path/to/file1.py", "last_accessed": now.isoformat(), "reason": "editing"},
             {
-                'path': '/path/to/file1.py',
-                'last_accessed': now.isoformat(),
-                'reason': 'editing'
+                "path": "/path/to/file2.py",
+                "last_accessed": (now - timedelta(minutes=5)).isoformat(),
+                "reason": "viewing",
             },
             {
-                'path': '/path/to/file2.py',
-                'last_accessed': (now - timedelta(minutes=5)).isoformat(),
-                'reason': 'viewing'
+                "path": "/path/to/file3.py",
+                "last_accessed": (now - timedelta(minutes=10)).isoformat(),
+                "reason": "search_result",
             },
-            {
-                'path': '/path/to/file3.py',
-                'last_accessed': (now - timedelta(minutes=10)).isoformat(),
-                'reason': 'search_result'
-            }
         ]
         mock_workspace_state.get_focus_files.return_value = focus_files
 
-        recommendations = analyzer.get_recommendations(limit=5, include_dependencies=False, include_patterns=False)
+        recommendations = analyzer.get_recommendations(
+            limit=5, include_dependencies=False, include_patterns=False
+        )
 
         # Should get recommendations based on recency
         assert len(recommendations) >= 0
@@ -89,31 +87,34 @@ class TestContextAnalyzer:
         """Test that top 5 focus files are filtered from recommendations."""
         now = datetime.now()
         focus_files = [
-            {'path': f'/file{i}.py', 'last_accessed': (now - timedelta(minutes=i)).isoformat(), 'reason': 'editing'}
+            {
+                "path": f"/file{i}.py",
+                "last_accessed": (now - timedelta(minutes=i)).isoformat(),
+                "reason": "editing",
+            }
             for i in range(10)
         ]
         mock_workspace_state.get_focus_files.return_value = focus_files
 
-        recommendations = analyzer.get_recommendations(limit=10, include_dependencies=False, include_patterns=False)
+        recommendations = analyzer.get_recommendations(
+            limit=10, include_dependencies=False, include_patterns=False
+        )
 
         # Top 5 files should not appear in recommendations
-        rec_paths = [r['file'] for r in recommendations]
+        rec_paths = [r["file"] for r in recommendations]
         for i in range(5):
-            assert f'/file{i}.py' not in rec_paths
+            assert f"/file{i}.py" not in rec_paths
 
     def test_get_related_files_nonexistent_file(self, analyzer):
         """Test getting related files for non-existent file."""
-        related = analyzer.get_related_files('/nonexistent/file.py')
+        related = analyzer.get_related_files("/nonexistent/file.py")
         assert related == []
 
     def test_get_related_files_with_imports(self, analyzer, temp_workspace):
         """Test finding related files by imports."""
         main_file = temp_workspace / "main.py"
 
-        related = analyzer.get_related_files(
-            str(main_file),
-            relationship_type='imports'
-        )
+        related = analyzer.get_related_files(str(main_file), relationship_type="imports")
 
         # Should have some related files (even if not all resolved)
         assert isinstance(related, list)
@@ -124,26 +125,26 @@ class TestContextAnalyzer:
 
         patterns = analyzer.get_access_patterns()
 
-        assert patterns['total_files'] == 0
-        assert patterns['most_accessed'] == []
-        assert patterns['average_session_files'] == 0
+        assert patterns["total_files"] == 0
+        assert patterns["most_accessed"] == []
+        assert patterns["average_session_files"] == 0
 
     def test_get_access_patterns_with_data(self, analyzer, mock_workspace_state):
         """Test access patterns with focus files."""
         now = datetime.now()
         focus_files = [
-            {'path': '/file1.py', 'last_accessed': now.isoformat()},
-            {'path': '/file1.py', 'last_accessed': (now - timedelta(hours=1)).isoformat()},
-            {'path': '/file2.py', 'last_accessed': now.isoformat()},
+            {"path": "/file1.py", "last_accessed": now.isoformat()},
+            {"path": "/file1.py", "last_accessed": (now - timedelta(hours=1)).isoformat()},
+            {"path": "/file2.py", "last_accessed": now.isoformat()},
         ]
         mock_workspace_state.get_focus_files.return_value = focus_files
 
         patterns = analyzer.get_access_patterns()
 
-        assert patterns['total_files'] == 2
-        assert len(patterns['most_accessed']) > 0
-        assert patterns['most_accessed'][0]['file'] == '/file1.py'
-        assert patterns['most_accessed'][0]['count'] == 2
+        assert patterns["total_files"] == 2
+        assert len(patterns["most_accessed"]) > 0
+        assert patterns["most_accessed"][0]["file"] == "/file1.py"
+        assert patterns["most_accessed"][0]["count"] == 2
 
     def test_build_dependency_map(self, analyzer, temp_workspace):
         """Test building dependency map."""
@@ -178,41 +179,34 @@ class TestContextAnalyzer:
         """Test prediction with current file."""
         main_file = temp_workspace / "main.py"
 
-        predictions = analyzer.predict_next_files(
-            current_file=str(main_file),
-            limit=5
-        )
+        predictions = analyzer.predict_next_files(current_file=str(main_file), limit=5)
 
         # Should return some predictions
         assert isinstance(predictions, list)
         for pred in predictions:
-            assert 'file' in pred
-            assert 'confidence' in pred
-            assert 'reason' in pred
-            assert 0.0 <= pred['confidence'] <= 1.0
+            assert "file" in pred
+            assert "confidence" in pred
+            assert "reason" in pred
+            assert 0.0 <= pred["confidence"] <= 1.0
 
     def test_get_context_summary(self, analyzer, mock_workspace_state):
         """Test context summary generation."""
         now = datetime.now()
         mock_workspace_state.get_focus_files.return_value = [
-            {'path': '/file1.py', 'last_accessed': now.isoformat(), 'reason': 'editing'},
-            {'path': '/file2.js', 'last_accessed': now.isoformat(), 'reason': 'viewing'}
+            {"path": "/file1.py", "last_accessed": now.isoformat(), "reason": "editing"},
+            {"path": "/file2.js", "last_accessed": now.isoformat(), "reason": "viewing"},
         ]
-        mock_workspace_state.get_recent_queries.return_value = [
-            {'server': 'rag', 'query': 'test'}
-        ]
-        mock_workspace_state.get_active_tasks.return_value = [
-            {'description': 'Fix bug'}
-        ]
+        mock_workspace_state.get_recent_queries.return_value = [{"server": "rag", "query": "test"}]
+        mock_workspace_state.get_active_tasks.return_value = [{"description": "Fix bug"}]
 
         summary = analyzer.get_context_summary()
 
-        assert summary['focus_files_count'] == 2
-        assert summary['active_tasks_count'] == 1
-        assert summary['recent_queries_count'] == 1
-        assert '.py' in summary['primary_file_types']
-        assert summary['server_usage']['rag'] == 1
-        assert len(summary['current_focus']) <= 5
+        assert summary["focus_files_count"] == 2
+        assert summary["active_tasks_count"] == 1
+        assert summary["recent_queries_count"] == 1
+        assert ".py" in summary["primary_file_types"]
+        assert summary["server_usage"]["rag"] == 1
+        assert len(summary["current_focus"]) <= 5
 
     def test_extract_imports_invalid_syntax(self, analyzer, temp_workspace):
         """Test extracting imports from file with invalid syntax."""
@@ -227,7 +221,7 @@ class TestContextAnalyzer:
     def test_pattern_cache_ttl(self, analyzer, mock_workspace_state):
         """Test pattern cache expiration."""
         mock_workspace_state.get_focus_files.return_value = [
-            {'path': '/file1.py', 'last_accessed': datetime.now().isoformat()}
+            {"path": "/file1.py", "last_accessed": datetime.now().isoformat()}
         ]
 
         # Get pattern cache
@@ -245,26 +239,26 @@ class TestContextAnalyzer:
         """Test co-access pattern detection."""
         now = datetime.now()
         focus_files = [
-            {'path': '/file1.py', 'last_accessed': now.isoformat()},
-            {'path': '/file2.py', 'last_accessed': (now + timedelta(minutes=1)).isoformat()},
-            {'path': '/file3.py', 'last_accessed': (now + timedelta(minutes=2)).isoformat()},
+            {"path": "/file1.py", "last_accessed": now.isoformat()},
+            {"path": "/file2.py", "last_accessed": (now + timedelta(minutes=1)).isoformat()},
+            {"path": "/file3.py", "last_accessed": (now + timedelta(minutes=2)).isoformat()},
         ]
         mock_workspace_state.get_focus_files.return_value = focus_files
 
         cache = analyzer._get_pattern_cache()
 
         # Files accessed close together should be in co_access_map
-        assert 'co_access_map' in cache
-        co_access = cache['co_access_map']
+        assert "co_access_map" in cache
+        co_access = cache["co_access_map"]
 
         # file1 and file2 should be linked (accessed within 1 hour)
-        if '/file1.py' in co_access:
-            assert isinstance(co_access['/file1.py'], dict)
+        if "/file1.py" in co_access:
+            assert isinstance(co_access["/file1.py"], dict)
 
     def test_resolve_imports_local_modules(self, analyzer, temp_workspace):
         """Test resolving imports to local file paths."""
         main_file = temp_workspace / "main.py"
-        imports = {'utils', 'helpers'}
+        imports = {"utils", "helpers"}
 
         resolved = analyzer._resolve_imports(imports, main_file)
 
@@ -277,8 +271,8 @@ class TestContextAnalyzer:
 
         # Mock focus files to include our test files
         mock_workspace_state.get_focus_files.return_value = [
-            {'path': str(temp_workspace / "main.py")},
-            {'path': str(temp_workspace / "helpers.py")}
+            {"path": str(temp_workspace / "main.py")},
+            {"path": str(temp_workspace / "helpers.py")},
         ]
 
         imported_by = analyzer._find_reverse_dependencies(str(utils_file))
@@ -290,30 +284,32 @@ class TestContextAnalyzer:
         """Test that recommendations combine multiple scoring factors."""
         now = datetime.now()
         focus_files = [
-            {'path': '/file1.py', 'last_accessed': now.isoformat(), 'reason': 'editing'},
-            {'path': '/file2.py', 'last_accessed': (now - timedelta(minutes=5)).isoformat(), 'reason': 'viewing'}
+            {"path": "/file1.py", "last_accessed": now.isoformat(), "reason": "editing"},
+            {
+                "path": "/file2.py",
+                "last_accessed": (now - timedelta(minutes=5)).isoformat(),
+                "reason": "viewing",
+            },
         ]
         mock_workspace_state.get_focus_files.return_value = focus_files
 
         # Get recommendations with all factors
         recs = analyzer.get_recommendations(
-            limit=5,
-            include_dependencies=True,
-            include_patterns=True
+            limit=5, include_dependencies=True, include_patterns=True
         )
 
         # Each recommendation should have score and reasons
         for rec in recs:
-            assert 'score' in rec
-            assert 'reasons' in rec
-            assert isinstance(rec['reasons'], list)
-            assert rec['score'] >= 0.0
+            assert "score" in rec
+            assert "reasons" in rec
+            assert isinstance(rec["reasons"], list)
+            assert rec["score"] >= 0.0
 
     def test_frequent_files_detection(self, analyzer, mock_workspace_state):
         """Test detection of frequently accessed files."""
         now = datetime.now()
         focus_files = [
-            {'path': '/frequent.py', 'last_accessed': (now - timedelta(minutes=i)).isoformat()}
+            {"path": "/frequent.py", "last_accessed": (now - timedelta(minutes=i)).isoformat()}
             for i in range(5)
         ]
         mock_workspace_state.get_focus_files.return_value = focus_files
@@ -321,8 +317,8 @@ class TestContextAnalyzer:
         cache = analyzer._get_pattern_cache()
 
         # File accessed 5 times should be in frequent_files
-        assert 'frequent_files' in cache
-        assert '/frequent.py' in cache['frequent_files']
+        assert "frequent_files" in cache
+        assert "/frequent.py" in cache["frequent_files"]
 
 
 if __name__ == "__main__":

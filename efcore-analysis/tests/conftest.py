@@ -1,9 +1,10 @@
 """Shared test fixtures for EF Core Analysis tests."""
 
-import pytest
-from pathlib import Path
-import tempfile
 import shutil
+import tempfile
+from pathlib import Path
+
+import pytest
 
 
 @pytest.fixture
@@ -18,7 +19,7 @@ def temp_dir():
 def sample_dbcontext(temp_dir) -> Path:
     """Create a sample DbContext file."""
     file_path = temp_dir / "ApplicationDbContext.cs"
-    file_path.write_text('''
+    file_path.write_text("""
 using Microsoft.EntityFrameworkCore;
 using MyApp.Models;
 
@@ -55,7 +56,7 @@ namespace MyApp.Data
         }
     }
 }
-''')
+""")
     return file_path
 
 
@@ -63,7 +64,7 @@ namespace MyApp.Data
 def sample_entity_simple(temp_dir) -> Path:
     """Create a simple entity model."""
     file_path = temp_dir / "User.cs"
-    file_path.write_text('''
+    file_path.write_text("""
 using System;
 using System.ComponentModel.DataAnnotations;
 
@@ -87,7 +88,7 @@ namespace MyApp.Models
         public bool IsActive { get; set; }
     }
 }
-''')
+""")
     return file_path
 
 
@@ -95,7 +96,7 @@ namespace MyApp.Models
 def sample_entity_with_relationships(temp_dir) -> Path:
     """Create an entity model with navigation properties."""
     file_path = temp_dir / "Order.cs"
-    file_path.write_text('''
+    file_path.write_text("""
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -121,7 +122,7 @@ namespace MyApp.Models
         public ICollection<OrderItem> OrderItems { get; set; }
     }
 }
-''')
+""")
     return file_path
 
 
@@ -129,7 +130,7 @@ namespace MyApp.Models
 def sample_entity_invalid(temp_dir) -> Path:
     """Create an entity model with validation issues."""
     file_path = temp_dir / "InvalidEntity.cs"
-    file_path.write_text('''
+    file_path.write_text("""
 using System.Collections.Generic;
 
 namespace MyApp.Models
@@ -142,7 +143,7 @@ namespace MyApp.Models
         public ICollection<Order> Orders { get; set; }  // Missing foreign key
     }
 }
-''')
+""")
     return file_path
 
 
@@ -150,7 +151,7 @@ namespace MyApp.Models
 def sample_linq_queries(temp_dir) -> Path:
     """Create a repository file with various LINQ queries."""
     file_path = temp_dir / "UserRepository.cs"
-    file_path.write_text('''
+    file_path.write_text("""
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -208,7 +209,7 @@ namespace MyApp.Repositories
         }
     }
 }
-''')
+""")
     return file_path
 
 
@@ -216,7 +217,7 @@ namespace MyApp.Repositories
 def sample_linq_no_issues(temp_dir) -> Path:
     """Create a repository file with optimized LINQ queries."""
     file_path = temp_dir / "OptimizedRepository.cs"
-    file_path.write_text('''
+    file_path.write_text("""
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -252,7 +253,7 @@ namespace MyApp.Repositories
         }
     }
 }
-''')
+""")
     return file_path
 
 
@@ -267,7 +268,7 @@ def sample_project_structure(temp_dir) -> Path:
     models_dir.mkdir()
 
     # User.cs
-    (models_dir / "User.cs").write_text('''
+    (models_dir / "User.cs").write_text("""
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -286,10 +287,10 @@ namespace MyApp.Models
         public ICollection<Order> Orders { get; set; }
     }
 }
-''')
+""")
 
     # Order.cs
-    (models_dir / "Order.cs").write_text('''
+    (models_dir / "Order.cs").write_text("""
 using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -308,10 +309,10 @@ namespace MyApp.Models
         public DateTime OrderDate { get; set; }
     }
 }
-''')
+""")
 
     # Product.cs
-    (models_dir / "Product.cs").write_text('''
+    (models_dir / "Product.cs").write_text("""
 using System.ComponentModel.DataAnnotations;
 
 namespace MyApp.Models
@@ -326,14 +327,14 @@ namespace MyApp.Models
         public int CategoryId { get; set; }
     }
 }
-''')
+""")
 
     # Data directory
     data_dir = project_dir / "Data"
     data_dir.mkdir()
 
     # ApplicationDbContext.cs
-    (data_dir / "ApplicationDbContext.cs").write_text('''
+    (data_dir / "ApplicationDbContext.cs").write_text("""
 using Microsoft.EntityFrameworkCore;
 using MyApp.Models;
 
@@ -346,14 +347,14 @@ namespace MyApp.Data
         public DbSet<Product> Products { get; set; }
     }
 }
-''')
+""")
 
     # Repositories directory
     repos_dir = project_dir / "Repositories"
     repos_dir.mkdir()
 
     # UserRepository.cs with queries
-    (repos_dir / "UserRepository.cs").write_text('''
+    (repos_dir / "UserRepository.cs").write_text("""
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
@@ -382,10 +383,10 @@ namespace MyApp.Repositories
         }
     }
 }
-''')
+""")
 
     # OrderRepository.cs with queries
-    (repos_dir / "OrderRepository.cs").write_text('''
+    (repos_dir / "OrderRepository.cs").write_text("""
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
@@ -407,10 +408,10 @@ namespace MyApp.Repositories
         }
     }
 }
-''')
+""")
 
     # ProductService.cs with queries
-    (repos_dir / "ProductService.cs").write_text('''
+    (repos_dir / "ProductService.cs").write_text("""
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
@@ -432,7 +433,7 @@ namespace MyApp.Services
         }
     }
 }
-''')
+""")
 
     return project_dir
 
@@ -441,7 +442,7 @@ namespace MyApp.Services
 def sample_model_old(temp_dir) -> Path:
     """Create an old version of a model for migration testing."""
     file_path = temp_dir / "User.old.cs"
-    file_path.write_text('''
+    file_path.write_text("""
 using System;
 using System.ComponentModel.DataAnnotations;
 
@@ -458,7 +459,7 @@ namespace MyApp.Models
         public DateTime CreatedAt { get; set; }
     }
 }
-''')
+""")
     return file_path
 
 
@@ -466,7 +467,7 @@ namespace MyApp.Models
 def sample_model_new(temp_dir) -> Path:
     """Create a new version of a model for migration testing."""
     file_path = temp_dir / "User.new.cs"
-    file_path.write_text('''
+    file_path.write_text("""
 using System;
 using System.ComponentModel.DataAnnotations;
 
@@ -489,5 +490,5 @@ namespace MyApp.Models
         public bool IsActive { get; set; }
     }
 }
-''')
+""")
     return file_path

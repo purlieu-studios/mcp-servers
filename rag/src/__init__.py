@@ -4,4 +4,4 @@ __version__ = "0.1.0"
 
 from .rag_server import RAGServer
 
-__all__ = ['RAGServer']
+__all__ = ["RAGServer"]

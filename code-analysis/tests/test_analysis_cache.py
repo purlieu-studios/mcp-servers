@@ -1,11 +1,11 @@
 """Tests for analysis cache module."""
 
-import pytest
-import json
 import tempfile
 from pathlib import Path
-from src.analysis_cache import AnalysisCache
 
+import pytest
+
+from src.analysis_cache import AnalysisCache
 
 pytestmark = pytest.mark.unit
 
@@ -165,7 +165,7 @@ class TestAnalysisCache:
         cache_files = list(temp_cache_dir.glob("*.json"))
         assert len(cache_files) >= 1
 
-        with open(cache_files[0], 'w') as f:
+        with open(cache_files[0], "w") as f:
             f.write("invalid json {{{")
 
         # Should handle corruption gracefully

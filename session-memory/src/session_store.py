@@ -9,8 +9,8 @@ import logging
 import sqlite3
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, List, Optional
 from threading import Lock
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 class SessionStore:
     """SQLite-based session memory storage."""
 
-    def __init__(self, db_path: Optional[Path] = None):
+    def __init__(self, db_path: Path | None = None):
         """Initialize session store.
 
         Args:
@@ -30,7 +30,7 @@ class SessionStore:
         self.db_path = Path(db_path)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._lock = Lock()
-        self._current_session_id: Optional[int] = None
+        self._current_session_id: int | None = None
 
         self._init_database()
         logger.info(f"Initialized session store at {self.db_path}")
@@ -91,15 +91,19 @@ class SessionStore:
 
             # Create indexes
             conn.execute("CREATE INDEX IF NOT EXISTS idx_messages_session ON messages(session_id)")
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_messages_timestamp ON messages(timestamp DESC)")
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_messages_timestamp ON messages(timestamp DESC)"
+            )
             conn.execute("CREATE INDEX IF NOT EXISTS idx_sessions_status ON sessions(status)")
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_sessions_start ON sessions(start_time DESC)")
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_sessions_start ON sessions(start_time DESC)"
+            )
 
             conn.commit()
         finally:
             conn.close()
 
-    def create_session(self, tags: Optional[Dict[str, str]] = None) -> int:
+    def create_session(self, tags: dict[str, str] | None = None) -> int:
         """Create a new session.
 
         Args:
@@ -111,19 +115,25 @@ class SessionStore:
         with self._lock:
             conn = sqlite3.connect(self.db_path)
             try:
-                cursor = conn.execute("""
+                cursor = conn.execute(
+                    """
                     INSERT INTO sessions (start_time, status)
                     VALUES (?, 'active')
-                """, (datetime.now().isoformat(),))
+                """,
+                    (datetime.now().isoformat(),),
+                )
                 session_id = cursor.lastrowid
 
                 # Add tags if provided
                 if tags:
                     for tag, value in tags.items():
-                        conn.execute("""
+                        conn.execute(
+                            """
                             INSERT INTO session_tags (session_id, tag, value)
                             VALUES (?, ?, ?)
-                        """, (session_id, tag, value))
+                        """,
+                            (session_id, tag, value),
+                        )
 
                 conn.commit()
                 self._current_session_id = session_id
@@ -146,11 +156,14 @@ class SessionStore:
             try:
                 # Check for recent active session (within last 30 minutes)
                 cutoff = (datetime.now() - timedelta(minutes=30)).isoformat()
-                cursor = conn.execute("""
+                cursor = conn.execute(
+                    """
                     SELECT id FROM sessions
                     WHERE status = 'active' AND start_time > ?
                     ORDER BY start_time DESC LIMIT 1
-                """, (cutoff,))
+                """,
+                    (cutoff,),
+                )
                 row = cursor.fetchone()
 
                 if row:
@@ -158,10 +171,13 @@ class SessionStore:
                     logger.info(f"Resuming session: {self._current_session_id}")
                 else:
                     # Create new session
-                    cursor = conn.execute("""
+                    cursor = conn.execute(
+                        """
                         INSERT INTO sessions (start_time, status)
                         VALUES (?, 'active')
-                    """, (datetime.now().isoformat(),))
+                    """,
+                        (datetime.now().isoformat(),),
+                    )
                     self._current_session_id = cursor.lastrowid
                     conn.commit()
                     logger.info(f"Created new session: {self._current_session_id}")
@@ -175,8 +191,8 @@ class SessionStore:
         role: str,
         content: str,
         tokens: int = 0,
-        metadata: Optional[Dict[str, Any]] = None,
-        session_id: Optional[int] = None
+        metadata: dict[str, Any] | None = None,
+        session_id: int | None = None,
     ) -> int:
         """Log a conversation message.
 
@@ -197,20 +213,26 @@ class SessionStore:
         try:
             metadata_json = json.dumps(metadata) if metadata else None
 
-            cursor = conn.execute("""
+            cursor = conn.execute(
+                """
                 INSERT INTO messages (session_id, role, content, timestamp, tokens, metadata)
                 VALUES (?, ?, ?, ?, ?, ?)
-            """, (session_id, role, content, datetime.now().isoformat(), tokens, metadata_json))
+            """,
+                (session_id, role, content, datetime.now().isoformat(), tokens, metadata_json),
+            )
 
             message_id = cursor.lastrowid
 
             # Update session stats
-            conn.execute("""
+            conn.execute(
+                """
                 UPDATE sessions
                 SET message_count = message_count + 1,
                     total_tokens = total_tokens + ?
                 WHERE id = ?
-            """, (tokens, session_id))
+            """,
+                (tokens, session_id),
+            )
 
             conn.commit()
             logger.debug(f"Logged message {message_id} to session {session_id}")
@@ -219,10 +241,7 @@ class SessionStore:
             conn.close()
 
     def log_decision(
-        self,
-        decision: str,
-        context: Optional[str] = None,
-        session_id: Optional[int] = None
+        self, decision: str, context: str | None = None, session_id: int | None = None
     ) -> int:
         """Log a key decision or action.
 
@@ -239,10 +258,13 @@ class SessionStore:
 
         conn = sqlite3.connect(self.db_path)
         try:
-            cursor = conn.execute("""
+            cursor = conn.execute(
+                """
                 INSERT INTO decisions (session_id, decision, context, timestamp)
                 VALUES (?, ?, ?, ?)
-            """, (session_id, decision, context, datetime.now().isoformat()))
+            """,
+                (session_id, decision, context, datetime.now().isoformat()),
+            )
 
             conn.commit()
             decision_id = cursor.lastrowid
@@ -252,11 +274,8 @@ class SessionStore:
             conn.close()
 
     def get_session_messages(
-        self,
-        session_id: Optional[int] = None,
-        limit: Optional[int] = None,
-        role: Optional[str] = None
-    ) -> List[Dict[str, Any]]:
+        self, session_id: int | None = None, limit: int | None = None, role: str | None = None
+    ) -> list[dict[str, Any]]:
         """Get messages from a session.
 
         Args:
@@ -298,7 +317,7 @@ class SessionStore:
                     "role": row["role"],
                     "content": row["content"],
                     "timestamp": row["timestamp"],
-                    "tokens": row["tokens"]
+                    "tokens": row["tokens"],
                 }
                 if row["metadata"]:
                     msg["metadata"] = json.loads(row["metadata"])
@@ -308,7 +327,7 @@ class SessionStore:
         finally:
             conn.close()
 
-    def get_session_info(self, session_id: Optional[int] = None) -> Optional[Dict[str, Any]]:
+    def get_session_info(self, session_id: int | None = None) -> dict[str, Any] | None:
         """Get session information.
 
         Args:
@@ -323,18 +342,24 @@ class SessionStore:
         conn = sqlite3.connect(self.db_path)
         try:
             conn.row_factory = sqlite3.Row
-            cursor = conn.execute("""
+            cursor = conn.execute(
+                """
                 SELECT * FROM sessions WHERE id = ?
-            """, (session_id,))
+            """,
+                (session_id,),
+            )
             row = cursor.fetchone()
 
             if not row:
                 return None
 
             # Get tags
-            cursor = conn.execute("""
+            cursor = conn.execute(
+                """
                 SELECT tag, value FROM session_tags WHERE session_id = ?
-            """, (session_id,))
+            """,
+                (session_id,),
+            )
             tags = {row[0]: row[1] for row in cursor.fetchall()}
 
             return {
@@ -345,17 +370,14 @@ class SessionStore:
                 "summary": row["summary"],
                 "message_count": row["message_count"],
                 "total_tokens": row["total_tokens"],
-                "tags": tags
+                "tags": tags,
             }
         finally:
             conn.close()
 
     def search_sessions(
-        self,
-        query: Optional[str] = None,
-        tag: Optional[str] = None,
-        limit: int = 10
-    ) -> List[Dict[str, Any]]:
+        self, query: str | None = None, tag: str | None = None, limit: int = 10
+    ) -> list[dict[str, Any]]:
         """Search sessions.
 
         Args:
@@ -372,34 +394,43 @@ class SessionStore:
 
             if query:
                 # Search in messages and decisions
-                cursor = conn.execute("""
+                cursor = conn.execute(
+                    """
                     SELECT DISTINCT s.* FROM sessions s
                     LEFT JOIN messages m ON s.id = m.session_id
                     LEFT JOIN decisions d ON s.id = d.session_id
                     WHERE m.content LIKE ? OR d.decision LIKE ?
                     ORDER BY s.start_time DESC LIMIT ?
-                """, (f"%{query}%", f"%{query}%", limit))
+                """,
+                    (f"%{query}%", f"%{query}%", limit),
+                )
             elif tag:
                 # Filter by tag
-                cursor = conn.execute("""
+                cursor = conn.execute(
+                    """
                     SELECT s.* FROM sessions s
                     JOIN session_tags st ON s.id = st.session_id
                     WHERE st.tag = ?
                     ORDER BY s.start_time DESC LIMIT ?
-                """, (tag, limit))
+                """,
+                    (tag, limit),
+                )
             else:
                 # Return recent sessions
-                cursor = conn.execute("""
+                cursor = conn.execute(
+                    """
                     SELECT * FROM sessions
                     ORDER BY start_time DESC LIMIT ?
-                """, (limit,))
+                """,
+                    (limit,),
+                )
 
             rows = cursor.fetchall()
             return [dict(row) for row in rows]
         finally:
             conn.close()
 
-    def end_session(self, session_id: Optional[int] = None, summary: Optional[str] = None):
+    def end_session(self, session_id: int | None = None, summary: str | None = None):
         """End a session.
 
         Args:
@@ -414,11 +445,14 @@ class SessionStore:
 
         conn = sqlite3.connect(self.db_path)
         try:
-            conn.execute("""
+            conn.execute(
+                """
                 UPDATE sessions
                 SET end_time = ?, status = 'completed', summary = ?
                 WHERE id = ?
-            """, (datetime.now().isoformat(), summary, session_id))
+            """,
+                (datetime.now().isoformat(), summary, session_id),
+            )
             conn.commit()
 
             if session_id == self._current_session_id:
@@ -428,7 +462,7 @@ class SessionStore:
         finally:
             conn.close()
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Get session statistics.
 
         Returns:
@@ -453,18 +487,18 @@ class SessionStore:
                 "total_messages": row[2] or 0,
                 "total_tokens": row[3] or 0,
                 "avg_messages_per_session": round(row[4], 2) if row[4] else 0,
-                "db_path": str(self.db_path)
+                "db_path": str(self.db_path),
             }
         finally:
             conn.close()
 
 
 # Global instance
-_store_instance: Optional[SessionStore] = None
+_store_instance: SessionStore | None = None
 _instance_lock = Lock()
 
 
-def get_session_store(db_path: Optional[Path] = None) -> SessionStore:
+def get_session_store(db_path: Path | None = None) -> SessionStore:
     """Get or create global session store instance.
 
     Args:

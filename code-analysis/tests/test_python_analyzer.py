@@ -1,8 +1,8 @@
 """Tests for Python code analyzer."""
-import pytest
-from pathlib import Path
-from src.analyzers.python_analyzer import PythonAnalyzer
 
+import pytest
+
+from src.analyzers.python_analyzer import PythonAnalyzer
 
 pytestmark = pytest.mark.unit
 
@@ -54,7 +54,9 @@ class TestPythonAnalyzer:
 
         assert user_class is not None
         assert user_class["name"] == "User"
-        assert "@dataclass" in str(user_class["decorators"]) or "dataclass" in user_class.get("decorators", [])
+        assert "@dataclass" in str(user_class["decorators"]) or "dataclass" in user_class.get(
+            "decorators", []
+        )
 
     @pytest.mark.asyncio
     async def test_parse_file_with_syntax_error(self, analyzer, temp_dir):
@@ -104,10 +106,10 @@ class TestPythonAnalyzer:
     async def test_analyze_functions_with_defaults(self, analyzer, temp_dir):
         """Test extracting functions with default parameters."""
         file_path = temp_dir / "defaults.py"
-        file_path.write_text('''
+        file_path.write_text("""
 def greet(name: str, greeting: str = "Hello") -> str:
     return f"{greeting}, {name}!"
-''')
+""")
 
         functions = await analyzer.analyze_functions(file_path)
 
@@ -136,7 +138,7 @@ def greet(name: str, greeting: str = "Hello") -> str:
     async def test_analyze_classes_with_inheritance(self, analyzer, temp_dir):
         """Test extracting classes with inheritance."""
         file_path = temp_dir / "inheritance.py"
-        file_path.write_text('''
+        file_path.write_text("""
 class Animal:
     def speak(self):
         pass
@@ -148,7 +150,7 @@ class Dog(Animal):
 class Cat(Animal):
     def speak(self):
         return "Meow!"
-''')
+""")
 
         classes = await analyzer.analyze_classes(file_path)
 
@@ -169,7 +171,9 @@ class Cat(Animal):
         assert "dataclass" in user_class["decorators"] or len(user_class["decorators"]) > 0
 
     @pytest.mark.asyncio
-    async def test_analyze_classes_distinguishes_methods_and_properties(self, analyzer, sample_python_complex):
+    async def test_analyze_classes_distinguishes_methods_and_properties(
+        self, analyzer, sample_python_complex
+    ):
         """Test that methods and properties are correctly categorized."""
         classes = await analyzer.analyze_classes(sample_python_complex)
 
@@ -210,8 +214,7 @@ class Cat(Animal):
     async def test_calculate_complexity_specific_function(self, analyzer, sample_python_complex):
         """Test complexity calculation for a specific function."""
         complexities = await analyzer.calculate_cyclomatic_complexity(
-            sample_python_complex,
-            function_name="complex_function"
+            sample_python_complex, function_name="complex_function"
         )
 
         # Should only return the requested function
@@ -222,13 +225,13 @@ class Cat(Animal):
     async def test_extract_parameters_with_varargs(self, analyzer, temp_dir):
         """Test extracting functions with *args and **kwargs."""
         file_path = temp_dir / "varargs.py"
-        file_path.write_text('''
+        file_path.write_text("""
 def flexible(*args, **kwargs):
     pass
 
 def typed_flexible(*args: int, **kwargs: str):
     pass
-''')
+""")
 
         functions = await analyzer.analyze_functions(file_path)
 
@@ -283,7 +286,7 @@ def typed_flexible(*args: int, **kwargs: str):
     async def test_decorators_extraction(self, analyzer, temp_dir):
         """Test extracting various decorator types."""
         file_path = temp_dir / "decorators.py"
-        file_path.write_text('''
+        file_path.write_text("""
 from functools import lru_cache
 
 @lru_cache
@@ -302,7 +305,7 @@ class MyClass:
     @classmethod
     def class_method(cls):
         pass
-''')
+""")
 
         functions = await analyzer.analyze_functions(file_path)
 

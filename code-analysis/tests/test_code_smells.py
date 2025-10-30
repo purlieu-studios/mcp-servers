@@ -1,9 +1,9 @@
 """Tests for code smell detection."""
-import pytest
-from pathlib import Path
-from src.code_smells import detect_code_smells
-from src.analyzers.python_analyzer import PythonAnalyzer
 
+import pytest
+
+from src.analyzers.python_analyzer import PythonAnalyzer
+from src.code_smells import detect_code_smells
 
 pytestmark = pytest.mark.unit
 
@@ -79,7 +79,9 @@ class TestCodeSmellDetection:
     @pytest.mark.asyncio
     async def test_severity_filtering_medium(self, analyzer, sample_python_code_smells):
         """Test filtering by medium severity."""
-        smells = await detect_code_smells(sample_python_code_smells, analyzer, min_severity="medium")
+        smells = await detect_code_smells(
+            sample_python_code_smells, analyzer, min_severity="medium"
+        )
 
         # Should exclude low severity issues
         low_severity = [s for s in smells if s["severity"] == "low"]

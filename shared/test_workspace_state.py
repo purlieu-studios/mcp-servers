@@ -1,9 +1,9 @@
 """Tests for workspace state module."""
 
-import pytest
-import json
 import tempfile
 from pathlib import Path
+
+import pytest
 from workspace_state import WorkspaceState
 
 
@@ -31,12 +31,12 @@ class TestWorkspaceState:
         """Test default state has correct structure."""
         state = workspace.load()
 
-        assert 'version' in state
-        assert 'last_updated' in state
-        assert 'focus_files' in state
-        assert 'recent_queries' in state
-        assert 'active_tasks' in state
-        assert 'session_metadata' in state
+        assert "version" in state
+        assert "last_updated" in state
+        assert "focus_files" in state
+        assert "recent_queries" in state
+        assert "active_tasks" in state
+        assert "session_metadata" in state
 
     def test_add_focus_file(self, workspace):
         """Test adding focus file."""
@@ -44,8 +44,8 @@ class TestWorkspaceState:
 
         focus_files = workspace.get_focus_files()
         assert len(focus_files) == 1
-        assert focus_files[0]['path'] == "/path/to/file.py"
-        assert focus_files[0]['reason'] == "editing"
+        assert focus_files[0]["path"] == "/path/to/file.py"
+        assert focus_files[0]["reason"] == "editing"
 
     def test_focus_files_deduplicated(self, workspace):
         """Test adding same file multiple times updates it."""
@@ -54,7 +54,7 @@ class TestWorkspaceState:
 
         focus_files = workspace.get_focus_files()
         assert len(focus_files) == 1
-        assert focus_files[0]['reason'] == "testing"
+        assert focus_files[0]["reason"] == "testing"
 
     def test_focus_files_limited(self, workspace):
         """Test focus files are limited to MAX_FOCUS_FILES."""
@@ -66,16 +66,12 @@ class TestWorkspaceState:
 
     def test_add_query(self, workspace):
         """Test adding query."""
-        workspace.add_query(
-            server="rag",
-            query="test query",
-            metadata={"index": "test-index"}
-        )
+        workspace.add_query(server="rag", query="test query", metadata={"index": "test-index"})
 
         queries = workspace.get_recent_queries()
         assert len(queries) == 1
-        assert queries[0]['server'] == "rag"
-        assert queries[0]['query'] == "test query"
+        assert queries[0]["server"] == "rag"
+        assert queries[0]["query"] == "test query"
 
     def test_queries_limited(self, workspace):
         """Test queries are limited to MAX_RECENT_QUERIES."""
@@ -91,21 +87,19 @@ class TestWorkspaceState:
         workspace.add_query(server="code-analysis", tool="analyze")
 
         meta = workspace.get_session_metadata()
-        assert meta['total_queries'] == 2
-        assert set(meta['servers_used']) == {'rag', 'code-analysis'}
+        assert meta["total_queries"] == 2
+        assert set(meta["servers_used"]) == {"rag", "code-analysis"}
 
     def test_add_task(self, workspace):
         """Test adding task."""
         workspace.add_task(
-            description="Refactor auth",
-            status="in_progress",
-            files=["/path/to/auth.py"]
+            description="Refactor auth", status="in_progress", files=["/path/to/auth.py"]
         )
 
         tasks = workspace.get_active_tasks()
         assert len(tasks) == 1
-        assert tasks[0]['description'] == "Refactor auth"
-        assert tasks[0]['status'] == "in_progress"
+        assert tasks[0]["description"] == "Refactor auth"
+        assert tasks[0]["status"] == "in_progress"
 
     def test_update_task_status(self, workspace):
         """Test updating task status."""
@@ -113,7 +107,7 @@ class TestWorkspaceState:
         workspace.update_task_status("Test task", "completed")
 
         tasks = workspace.get_active_tasks()
-        assert tasks[0]['status'] == "completed"
+        assert tasks[0]["status"] == "completed"
 
     def test_get_focus_files_with_limit(self, workspace):
         """Test getting limited focus files."""
@@ -131,7 +125,7 @@ class TestWorkspaceState:
 
         rag_queries = workspace.get_recent_queries(server="rag")
         assert len(rag_queries) == 2
-        assert all(q['server'] == 'rag' for q in rag_queries)
+        assert all(q["server"] == "rag" for q in rag_queries)
 
     def test_get_active_tasks_filtered(self, workspace):
         """Test filtering tasks by status."""
@@ -163,9 +157,9 @@ class TestWorkspaceState:
         workspace.clear()
 
         state = workspace.get_full_state()
-        assert len(state['focus_files']) == 0
-        assert len(state['recent_queries']) == 0
-        assert len(state['active_tasks']) == 0
+        assert len(state["focus_files"]) == 0
+        assert len(state["recent_queries"]) == 0
+        assert len(state["active_tasks"]) == 0
 
     def test_cleanup_old_entries(self, workspace):
         """Test cleanup removes old entries."""
@@ -188,15 +182,11 @@ class TestWorkspaceState:
 
     def test_metadata_with_focus_file(self, workspace):
         """Test adding metadata to focus file."""
-        workspace.add_focus_file(
-            "/file.py",
-            "editing",
-            metadata={"score": 0.95, "query": "test"}
-        )
+        workspace.add_focus_file("/file.py", "editing", metadata={"score": 0.95, "query": "test"})
 
         files = workspace.get_focus_files()
-        assert files[0]['score'] == 0.95
-        assert files[0]['query'] == "test"
+        assert files[0]["score"] == 0.95
+        assert files[0]["query"] == "test"
 
     def test_full_state_includes_all_sections(self, workspace):
         """Test get_full_state returns complete state."""
@@ -206,12 +196,12 @@ class TestWorkspaceState:
 
         state = workspace.get_full_state()
 
-        assert 'version' in state
-        assert 'last_updated' in state
-        assert 'focus_files' in state
-        assert 'recent_queries' in state
-        assert 'active_tasks' in state
-        assert 'session_metadata' in state
+        assert "version" in state
+        assert "last_updated" in state
+        assert "focus_files" in state
+        assert "recent_queries" in state
+        assert "active_tasks" in state
+        assert "session_metadata" in state
 
 
 if __name__ == "__main__":

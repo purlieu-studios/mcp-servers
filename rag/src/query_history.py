@@ -8,7 +8,7 @@ import logging
 import sqlite3
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 class QueryHistory:
     """SQLite-based query history tracker."""
 
-    def __init__(self, db_path: Optional[Path] = None):
+    def __init__(self, db_path: Path | None = None):
         """Initialize query history with SQLite database.
 
         Args:
@@ -68,12 +68,12 @@ class QueryHistory:
     def save_query(
         self,
         query: str,
-        results: List[Dict[str, Any]],
-        index_name: Optional[str] = None,
+        results: list[dict[str, Any]],
+        index_name: str | None = None,
         top_k: int = 5,
         min_score: float = 0.0,
         include_keywords: bool = True,
-        duration_ms: Optional[int] = None
+        duration_ms: int | None = None,
     ) -> int:
         """Save a query and its results to history.
 
@@ -95,15 +95,25 @@ class QueryHistory:
 
         conn = sqlite3.connect(self.db_path)
         try:
-            cursor = conn.execute("""
+            cursor = conn.execute(
+                """
                 INSERT INTO query_history
                 (query, index_name, top_k, min_score, include_keywords,
                  result_count, results, timestamp, duration_ms)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                query, index_name, top_k, min_score, include_keywords,
-                result_count, results_json, timestamp, duration_ms
-            ))
+            """,
+                (
+                    query,
+                    index_name,
+                    top_k,
+                    min_score,
+                    include_keywords,
+                    result_count,
+                    results_json,
+                    timestamp,
+                    duration_ms,
+                ),
+            )
             conn.commit()
             query_id = cursor.lastrowid
 
@@ -113,11 +123,8 @@ class QueryHistory:
             conn.close()
 
     def get_history(
-        self,
-        limit: int = 20,
-        index_name: Optional[str] = None,
-        include_results: bool = False
-    ) -> List[Dict[str, Any]]:
+        self, limit: int = 20, index_name: str | None = None, include_results: bool = False
+    ) -> list[dict[str, Any]]:
         """Get recent query history.
 
         Args:
@@ -172,7 +179,7 @@ class QueryHistory:
                     "include_keywords": bool(row["include_keywords"]),
                     "result_count": row["result_count"],
                     "timestamp": row["timestamp"],
-                    "duration_ms": row["duration_ms"]
+                    "duration_ms": row["duration_ms"],
                 }
 
                 if include_results:
@@ -184,7 +191,7 @@ class QueryHistory:
         finally:
             conn.close()
 
-    def get_query_by_id(self, query_id: int) -> Optional[Dict[str, Any]]:
+    def get_query_by_id(self, query_id: int) -> dict[str, Any] | None:
         """Get a specific query by ID.
 
         Args:
@@ -196,12 +203,15 @@ class QueryHistory:
         conn = sqlite3.connect(self.db_path)
         try:
             conn.row_factory = sqlite3.Row
-            cursor = conn.execute("""
+            cursor = conn.execute(
+                """
                 SELECT id, query, index_name, top_k, min_score, include_keywords,
                        result_count, results, timestamp, duration_ms
                 FROM query_history
                 WHERE id = ?
-            """, (query_id,))
+            """,
+                (query_id,),
+            )
             row = cursor.fetchone()
 
             if row is None:
@@ -217,12 +227,12 @@ class QueryHistory:
                 "result_count": row["result_count"],
                 "results": json.loads(row["results"]),
                 "timestamp": row["timestamp"],
-                "duration_ms": row["duration_ms"]
+                "duration_ms": row["duration_ms"],
             }
         finally:
             conn.close()
 
-    def search_history(self, search_term: str, limit: int = 10) -> List[Dict[str, Any]]:
+    def search_history(self, search_term: str, limit: int = 10) -> list[dict[str, Any]]:
         """Search query history by query text.
 
         Args:
@@ -235,14 +245,17 @@ class QueryHistory:
         conn = sqlite3.connect(self.db_path)
         try:
             conn.row_factory = sqlite3.Row
-            cursor = conn.execute("""
+            cursor = conn.execute(
+                """
                 SELECT id, query, index_name, top_k, min_score, include_keywords,
                        result_count, timestamp, duration_ms
                 FROM query_history
                 WHERE query LIKE ?
                 ORDER BY timestamp DESC
                 LIMIT ?
-            """, (f"%{search_term}%", limit))
+            """,
+                (f"%{search_term}%", limit),
+            )
             rows = cursor.fetchall()
 
             return [
@@ -255,14 +268,14 @@ class QueryHistory:
                     "include_keywords": bool(row["include_keywords"]),
                     "result_count": row["result_count"],
                     "timestamp": row["timestamp"],
-                    "duration_ms": row["duration_ms"]
+                    "duration_ms": row["duration_ms"],
                 }
                 for row in rows
             ]
         finally:
             conn.close()
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Get query history statistics.
 
         Returns:
@@ -295,12 +308,12 @@ class QueryHistory:
                 "avg_duration_ms": round(row[2], 2) if row[2] else 0,
                 "last_query_time": row[3],
                 "queries_by_index": index_stats,
-                "db_path": str(self.db_path)
+                "db_path": str(self.db_path),
             }
         finally:
             conn.close()
 
-    def clear_history(self, older_than_days: Optional[int] = None) -> int:
+    def clear_history(self, older_than_days: int | None = None) -> int:
         """Clear query history.
 
         Args:
@@ -317,11 +330,11 @@ class QueryHistory:
                 conn.commit()
             else:
                 from datetime import timedelta
+
                 cutoff_date = (datetime.now() - timedelta(days=older_than_days)).isoformat()
 
                 cursor = conn.execute(
-                    "DELETE FROM query_history WHERE timestamp < ?",
-                    (cutoff_date,)
+                    "DELETE FROM query_history WHERE timestamp < ?", (cutoff_date,)
                 )
                 deleted = cursor.rowcount
                 conn.commit()
@@ -333,7 +346,7 @@ class QueryHistory:
 
 
 # Global instance
-_history_instance: Optional[QueryHistory] = None
+_history_instance: QueryHistory | None = None
 
 
 def get_query_history() -> QueryHistory:

@@ -1,13 +1,12 @@
 """Integration tests for RAG MCP Server tools."""
-import pytest
-import pytest_asyncio
+
 import asyncio
 import json
 from pathlib import Path
-from unittest.mock import Mock, patch, AsyncMock
-import tempfile
-import shutil
+from unittest.mock import Mock, patch
 
+import pytest
+import pytest_asyncio
 
 # Mark all tests in this module as integration tests
 pytestmark = pytest.mark.integration
@@ -16,10 +15,10 @@ pytestmark = pytest.mark.integration
 @pytest_asyncio.fixture
 async def mock_ollama_client():
     """Mock Ollama client for testing."""
-    with patch('src.embeddings.ollama.Client') as mock_client_class:
+    with patch("src.embeddings.ollama.Client") as mock_client_class:
         mock_client = Mock()
         # Mock embeddings call
-        mock_client.embeddings.return_value = {'embedding': [0.1] * 768}
+        mock_client.embeddings.return_value = {"embedding": [0.1] * 768}
         mock_client_class.return_value = mock_client
         yield mock_client
 
@@ -32,13 +31,10 @@ def test_config(tmp_path):
         "ollama": {
             "base_url": "http://localhost:11434",
             "model": "nomic-embed-text",
-            "batch_size": 32
+            "batch_size": 32,
         },
-        "chunking": {
-            "chunk_size": 512,
-            "overlap": 50
-        },
-        "indexes": []
+        "chunking": {"chunk_size": 512, "overlap": 50},
+        "indexes": [],
     }
 
     # Create test directory with some files
@@ -49,12 +45,14 @@ def test_config(tmp_path):
     (test_dir / "doc2.md").write_text("# Markdown\n\nThis document discusses machine learning.")
     (test_dir / "code.py").write_text("def hello():\n    print('Hello, world!')")
 
-    config["indexes"] = [{
-        "name": "test_index",
-        "path": str(test_dir),
-        "description": "Test index for integration tests",
-        "watch": False
-    }]
+    config["indexes"] = [
+        {
+            "name": "test_index",
+            "path": str(test_dir),
+            "description": "Test index for integration tests",
+            "watch": False,
+        }
+    ]
 
     return config
 
@@ -63,7 +61,7 @@ def test_config(tmp_path):
 def config_file(tmp_path, test_config):
     """Create a temporary config file."""
     config_path = tmp_path / "test_config.json"
-    with open(config_path, 'w') as f:
+    with open(config_path, "w") as f:
         json.dump(test_config, f)
     return config_path
 
@@ -75,8 +73,8 @@ class TestRAGServerIntegration:
     @pytest.mark.asyncio
     async def test_server_initialization(self, mock_ollama_client, config_file):
         """Test that server initializes correctly."""
-        with patch.dict('os.environ', {'CONFIG_PATH': str(config_file)}):
-            from src.rag_server import server, config, index_managers
+        with patch.dict("os.environ", {"CONFIG_PATH": str(config_file)}):
+            from src.rag_server import config
 
             # Verify config loaded
             assert config is not None
@@ -95,7 +93,7 @@ class TestRAGServerIntegration:
             directory=index_config["path"],
             storage_path=test_config["storage_path"],
             ollama_config=test_config["ollama"],
-            chunking_config=test_config["chunking"]
+            chunking_config=test_config["chunking"],
         )
 
         # Initialize the index
@@ -122,7 +120,7 @@ class TestRAGServerIntegration:
             directory=index_config["path"],
             storage_path=test_config["storage_path"],
             ollama_config=test_config["ollama"],
-            chunking_config=test_config["chunking"]
+            chunking_config=test_config["chunking"],
         )
 
         # Test initialization
@@ -149,17 +147,14 @@ class TestRAGServerIntegration:
             directory=index_config["path"],
             storage_path=test_config["storage_path"],
             ollama_config=test_config["ollama"],
-            chunking_config=test_config["chunking"]
+            chunking_config=test_config["chunking"],
         )
 
         await manager.initialize()
 
         # Query for something in the docs
         results = await manager.query(
-            query="machine learning",
-            top_k=3,
-            semantic_weight=0.7,
-            keyword_weight=0.3
+            query="machine learning", top_k=3, semantic_weight=0.7, keyword_weight=0.3
         )
 
         # Should find relevant results
@@ -185,7 +180,7 @@ class TestRAGServerIntegration:
             directory=index_config["path"],
             storage_path=test_config["storage_path"],
             ollama_config=test_config["ollama"],
-            chunking_config=test_config["chunking"]
+            chunking_config=test_config["chunking"],
         )
 
         await manager.initialize()
@@ -212,7 +207,7 @@ class TestRAGServerIntegration:
             directory=str(test_dir),
             storage_path=test_config["storage_path"],
             ollama_config=test_config["ollama"],
-            chunking_config=test_config["chunking"]
+            chunking_config=test_config["chunking"],
         )
 
         # Initial indexing
@@ -249,12 +244,9 @@ class TestRAGServerIntegration:
             "ollama": {
                 "base_url": "http://localhost:11434",
                 "model": "nomic-embed-text",
-                "batch_size": 32
+                "batch_size": 32,
             },
-            "chunking": {
-                "chunk_size": 512,
-                "overlap": 50
-            }
+            "chunking": {"chunk_size": 512, "overlap": 50},
         }
 
         # Create two managers
@@ -263,7 +255,7 @@ class TestRAGServerIntegration:
             directory=str(dir1),
             storage_path=str(tmp_path / "storage1"),
             ollama_config=config["ollama"],
-            chunking_config=config["chunking"]
+            chunking_config=config["chunking"],
         )
 
         manager2 = IndexManager(
@@ -271,7 +263,7 @@ class TestRAGServerIntegration:
             directory=str(dir2),
             storage_path=str(tmp_path / "storage2"),
             ollama_config=config["ollama"],
-            chunking_config=config["chunking"]
+            chunking_config=config["chunking"],
         )
 
         # Initialize both
@@ -308,12 +300,9 @@ class TestRAGServerIntegration:
             ollama_config={
                 "base_url": "http://localhost:11434",
                 "model": "nomic-embed-text",
-                "batch_size": 32
+                "batch_size": 32,
             },
-            chunking_config={
-                "chunk_size": 512,
-                "overlap": 50
-            }
+            chunking_config={"chunk_size": 512, "overlap": 50},
         )
 
         # Should handle gracefully
@@ -340,12 +329,9 @@ class TestRAGServerIntegration:
             ollama_config={
                 "base_url": "http://localhost:11434",
                 "model": "nomic-embed-text",
-                "batch_size": 32
+                "batch_size": 32,
             },
-            chunking_config={
-                "chunk_size": 512,
-                "overlap": 50
-            }
+            chunking_config={"chunk_size": 512, "overlap": 50},
         )
 
         await manager.initialize()
@@ -372,7 +358,7 @@ class TestRAGServerIntegration:
             directory=index_config["path"],
             storage_path=test_config["storage_path"],
             ollama_config=test_config["ollama"],
-            chunking_config=test_config["chunking"]
+            chunking_config=test_config["chunking"],
         )
 
         await manager.initialize()
@@ -396,7 +382,7 @@ class TestRAGServerIntegration:
         """Test configuration loading."""
         import json
 
-        with open(config_file, 'r') as f:
+        with open(config_file) as f:
             config = json.load(f)
 
         assert "storage_path" in config
@@ -416,7 +402,7 @@ class TestRAGServerIntegration:
             directory=index_config["path"],
             storage_path=test_config["storage_path"],
             ollama_config=test_config["ollama"],
-            chunking_config=test_config["chunking"]
+            chunking_config=test_config["chunking"],
         )
 
         await manager.initialize()

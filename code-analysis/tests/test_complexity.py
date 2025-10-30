@@ -1,9 +1,9 @@
 """Tests for complexity analysis."""
-import pytest
-from pathlib import Path
-from src.complexity import calculate_complexity
-from src.analyzers.python_analyzer import PythonAnalyzer
 
+import pytest
+
+from src.analyzers.python_analyzer import PythonAnalyzer
+from src.complexity import calculate_complexity
 
 pytestmark = pytest.mark.unit
 
@@ -54,9 +54,7 @@ class TestComplexityAnalysis:
     async def test_calculate_complexity_specific_function(self, analyzer, sample_python_complex):
         """Test complexity calculation for a specific function."""
         result = await calculate_complexity(
-            sample_python_complex,
-            analyzer,
-            function_name="complex_function"
+            sample_python_complex, analyzer, function_name="complex_function"
         )
 
         assert "function_complexities" in result

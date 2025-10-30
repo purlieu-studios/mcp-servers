@@ -1,8 +1,8 @@
 """Tests for dependency analyzer."""
-import pytest
-from pathlib import Path
-from src.dependency_analyzer import DependencyAnalyzer
 
+import pytest
+
+from src.dependency_analyzer import DependencyAnalyzer
 
 pytestmark = pytest.mark.unit
 
@@ -131,14 +131,14 @@ class TestDependencyAnalyzer:
     async def test_extract_python_imports_from_imports(self, analyzer, temp_dir):
         """Test extracting various Python import styles."""
         file_path = temp_dir / "various_imports.py"
-        file_path.write_text('''
+        file_path.write_text("""
 import os
 import sys
 from pathlib import Path
 from typing import List, Dict
 from .models import User
 from ..utils import helper
-''')
+""")
 
         result = await analyzer.analyze(file_path)
 
@@ -152,11 +152,11 @@ from ..utils import helper
     async def test_extract_from_imports(self, analyzer, temp_dir):
         """Test extracting 'from X import Y' style imports."""
         file_path = temp_dir / "from_imports.py"
-        file_path.write_text('''
+        file_path.write_text("""
 from flask import Flask, request, jsonify
 from sqlalchemy.orm import Session
 from models import User, Order
-''')
+""")
 
         result = await analyzer.analyze(file_path)
 

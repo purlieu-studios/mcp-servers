@@ -88,7 +88,46 @@ pip install -r requirements.txt
 pip install -e .
 ```
 
-### 3. Create a Branch
+### 3. Install Pre-commit Hooks
+
+**⚡ Recommended: Set up pre-commit hooks for automatic code formatting and quality checks**
+
+```bash
+# Install pre-commit
+pip install pre-commit
+
+# Install git hooks
+pre-commit install
+
+# (Optional) Run on all files to verify setup
+pre-commit run --all-files
+```
+
+**What pre-commit hooks do:**
+- ✅ Auto-format Python code with `ruff`
+- ✅ Sort imports alphabetically
+- ✅ Remove trailing whitespace
+- ✅ Fix end-of-file issues
+- ✅ Check YAML/JSON syntax
+- ✅ Prevent committing merge conflicts
+- ✅ Check for common Python errors
+
+**Workflow with pre-commit:**
+```bash
+git add file.py
+git commit -m "fix: update function"
+# Pre-commit runs automatically, may modify files
+# If files were modified:
+git add file.py  # Add the auto-formatted changes
+git commit -m "fix: update function"  # Commit again
+```
+
+**Skip hooks** (use sparingly):
+```bash
+git commit --no-verify -m "commit message"
+```
+
+### 4. Create a Branch
 
 ```bash
 git checkout -b feature/your-feature-name
@@ -130,16 +169,25 @@ pytest tests/ --cov=src --cov-report=term
 
 ### 3. Check Code Quality
 
+**With pre-commit hooks installed** (recommended):
+
+Code quality checks run automatically on `git commit`. No manual steps needed!
+
+**Manual quality check** (if you haven't installed pre-commit):
+
 ```bash
-# Format code (if using black)
-black src/ tests/
+# Run pre-commit on changed files
+pre-commit run
 
-# Lint code (if using flake8)
-flake8 src/ tests/
-
-# Type checking (if using mypy)
-mypy src/
+# Or run on all files
+pre-commit run --all-files
 ```
+
+**What gets checked:**
+- ✅ Code formatting (ruff format)
+- ✅ Import sorting (ruff)
+- ✅ Linting (ruff)
+- ✅ File checks (trailing whitespace, end-of-file, YAML/JSON syntax)
 
 ### 4. Commit Your Changes
 

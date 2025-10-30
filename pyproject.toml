@@ -1,0 +1,71 @@
+# Ruff configuration for all MCP servers
+# https://docs.astral.sh/ruff/
+
+[tool.ruff]
+# Target Python 3.10+ for compatibility
+target-version = "py310"
+
+# Line length to match PR size checker convention
+line-length = 100
+
+# Exclude directories
+exclude = [
+    ".git",
+    ".venv",
+    "venv",
+    "__pycache__",
+    "*.egg-info",
+    ".pytest_cache",
+    ".coverage",
+    "htmlcov",
+    "dist",
+    "build",
+]
+
+[tool.ruff.lint]
+# Enable pycodestyle (`E`), Pyflakes (`F`), and isort (`I`)
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # Pyflakes
+    "I",   # isort
+    "N",   # pep8-naming
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "SIM", # flake8-simplify
+]
+
+# Ignore specific rules
+ignore = [
+    "E501",  # Line too long (handled by formatter)
+    "B008",  # Do not perform function call in argument defaults
+    "SIM102", # Nested if statements (sometimes clearer as-is)
+    "SIM105", # Use contextlib.suppress (try-except-pass is clearer)
+    "UP038",  # Old-style isinstance (both styles are fine)
+]
+
+# Allow unused variables when underscore-prefixed
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+[tool.ruff.lint.per-file-ignores]
+# Tests can use assertions, relative imports, and have unused variables
+"tests/**/*.py" = ["S101", "TID252", "F841"]
+# Allow bare except in specific analyzers for robustness
+"**/analyzers/*.py" = ["E722"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["src"]
+
+[tool.ruff.format]
+# Use double quotes for strings
+quote-style = "double"
+
+# Indent with spaces
+indent-style = "space"
+
+# Respect magic trailing comma
+skip-magic-trailing-comma = false
+
+# Auto-detect line ending
+line-ending = "auto"

@@ -1,9 +1,8 @@
 """Integration tests for EF Core Analysis MCP Server."""
 
-import pytest
 import asyncio
-from pathlib import Path
 
+import pytest
 
 pytestmark = pytest.mark.integration
 
@@ -16,9 +15,7 @@ class TestEFCoreAnalysisIntegration:
         """Test analyze_dbcontext tool."""
         from src.efcore_server import handle_analyze_dbcontext
 
-        result = await handle_analyze_dbcontext({
-            "file_path": str(sample_dbcontext)
-        })
+        result = await handle_analyze_dbcontext({"file_path": str(sample_dbcontext)})
 
         assert "dbcontext" in result
         dbcontext = result["dbcontext"]
@@ -30,9 +27,7 @@ class TestEFCoreAnalysisIntegration:
         """Test analyze_entity tool."""
         from src.efcore_server import handle_analyze_entity
 
-        result = await handle_analyze_entity({
-            "file_path": str(sample_entity_simple)
-        })
+        result = await handle_analyze_entity({"file_path": str(sample_entity_simple)})
 
         assert "entities" in result
         assert len(result["entities"]) >= 1
@@ -46,9 +41,7 @@ class TestEFCoreAnalysisIntegration:
         """Test analyze_entity with relationships."""
         from src.efcore_server import handle_analyze_entity
 
-        result = await handle_analyze_entity({
-            "file_path": str(sample_entity_with_relationships)
-        })
+        result = await handle_analyze_entity({"file_path": str(sample_entity_with_relationships)})
 
         # Result is wrapped in a dict by the handler
         assert "entities" in result
@@ -65,11 +58,13 @@ class TestEFCoreAnalysisIntegration:
         """Test generate_migration tool."""
         from src.efcore_server import handle_generate_migration
 
-        result = await handle_generate_migration({
-            "old_model_path": str(sample_model_old),
-            "new_model_path": str(sample_model_new),
-            "migration_name": "AddUserEmail"
-        })
+        result = await handle_generate_migration(
+            {
+                "old_model_path": str(sample_model_old),
+                "new_model_path": str(sample_model_new),
+                "migration_name": "AddUserEmail",
+            }
+        )
 
         assert "migration_name" in result
         assert result["migration_name"] == "AddUserEmail"
@@ -81,9 +76,7 @@ class TestEFCoreAnalysisIntegration:
         """Test analyze_linq tool."""
         from src.efcore_server import handle_analyze_linq
 
-        result = await handle_analyze_linq({
-            "file_path": str(sample_linq_queries)
-        })
+        result = await handle_analyze_linq({"file_path": str(sample_linq_queries)})
 
         assert "linq_analysis" in result
         analysis = result["linq_analysis"]
@@ -100,9 +93,7 @@ class TestEFCoreAnalysisIntegration:
         """Test suggest_indexes tool."""
         from src.efcore_server import handle_suggest_indexes
 
-        result = await handle_suggest_indexes({
-            "project_path": str(sample_project_structure)
-        })
+        result = await handle_suggest_indexes({"project_path": str(sample_project_structure)})
 
         assert "index_suggestions" in result
         assert len(result["index_suggestions"]) > 0
@@ -119,9 +110,7 @@ class TestEFCoreAnalysisIntegration:
         """Test validate_model tool."""
         from src.efcore_server import handle_validate_model
 
-        result = await handle_validate_model({
-            "file_path": str(sample_entity_simple)
-        })
+        result = await handle_validate_model({"file_path": str(sample_entity_simple)})
 
         assert "validation" in result
         validation = result["validation"]
@@ -134,9 +123,7 @@ class TestEFCoreAnalysisIntegration:
         """Test validate_model with invalid entity."""
         from src.efcore_server import handle_validate_model
 
-        result = await handle_validate_model({
-            "file_path": str(sample_entity_invalid)
-        })
+        result = await handle_validate_model({"file_path": str(sample_entity_invalid)})
 
         validation = result["validation"]
 
@@ -149,9 +136,7 @@ class TestEFCoreAnalysisIntegration:
         """Test find_relationships tool."""
         from src.efcore_server import handle_find_relationships
 
-        result = await handle_find_relationships({
-            "project_path": str(sample_project_structure)
-        })
+        result = await handle_find_relationships({"project_path": str(sample_project_structure)})
 
         assert "relationships" in result
         # May or may not find relationships depending on patterns
@@ -163,24 +148,24 @@ class TestEFCoreAnalysisIntegration:
         from src.efcore_server import handle_analyze_entity
 
         with pytest.raises(FileNotFoundError):
-            await handle_analyze_entity({
-                "file_path": "/nonexistent/file.cs"
-            })
+            await handle_analyze_entity({"file_path": "/nonexistent/file.cs"})
 
     @pytest.mark.asyncio
-    async def test_concurrent_tool_calls(self, sample_dbcontext, sample_entity_simple, sample_linq_queries):
+    async def test_concurrent_tool_calls(
+        self, sample_dbcontext, sample_entity_simple, sample_linq_queries
+    ):
         """Test running multiple tools concurrently."""
         from src.efcore_server import (
             handle_analyze_dbcontext,
             handle_analyze_entity,
-            handle_analyze_linq
+            handle_analyze_linq,
         )
 
         # Run tools concurrently
         tasks = [
             handle_analyze_dbcontext({"file_path": str(sample_dbcontext)}),
             handle_analyze_entity({"file_path": str(sample_entity_simple)}),
-            handle_analyze_linq({"file_path": str(sample_linq_queries)})
+            handle_analyze_linq({"file_path": str(sample_linq_queries)}),
         ]
 
         results = await asyncio.gather(*tasks)
@@ -193,23 +178,20 @@ class TestEFCoreAnalysisIntegration:
     @pytest.mark.e2e
     async def test_end_to_end_entity_analysis(self, sample_entity_with_relationships):
         """E2E test: Complete entity analysis workflow."""
-        from src.efcore_server import (
-            handle_analyze_entity,
-            handle_validate_model
-        )
+        from src.efcore_server import handle_analyze_entity, handle_validate_model
 
         # Step 1: Analyze entity structure
-        entity_result = await handle_analyze_entity({
-            "file_path": str(sample_entity_with_relationships)
-        })
+        entity_result = await handle_analyze_entity(
+            {"file_path": str(sample_entity_with_relationships)}
+        )
 
         assert len(entity_result["entities"]) > 0
         entity = entity_result["entities"][0]
 
         # Step 2: Validate the entity
-        validation_result = await handle_validate_model({
-            "file_path": str(sample_entity_with_relationships)
-        })
+        validation_result = await handle_validate_model(
+            {"file_path": str(sample_entity_with_relationships)}
+        )
 
         # Should complete validation
         assert "validation" in validation_result
@@ -219,25 +201,20 @@ class TestEFCoreAnalysisIntegration:
 
     @pytest.mark.asyncio
     @pytest.mark.e2e
-    async def test_end_to_end_optimization_workflow(self, sample_project_structure, sample_linq_queries):
+    async def test_end_to_end_optimization_workflow(
+        self, sample_project_structure, sample_linq_queries
+    ):
         """E2E test: Complete optimization workflow."""
-        from src.efcore_server import (
-            handle_analyze_linq,
-            handle_suggest_indexes
-        )
+        from src.efcore_server import handle_analyze_linq, handle_suggest_indexes
 
         # Step 1: Analyze LINQ queries
-        linq_result = await handle_analyze_linq({
-            "file_path": str(sample_linq_queries)
-        })
+        linq_result = await handle_analyze_linq({"file_path": str(sample_linq_queries)})
 
         # Should get analysis results
         assert "linq_analysis" in linq_result
 
         # Step 2: Get index suggestions
-        index_result = await handle_suggest_indexes({
-            "project_path": str(sample_project_structure)
-        })
+        index_result = await handle_suggest_indexes({"project_path": str(sample_project_structure)})
 
         # Should get suggestions (may be empty)
         assert "index_suggestions" in index_result
@@ -246,33 +223,28 @@ class TestEFCoreAnalysisIntegration:
     @pytest.mark.e2e
     async def test_end_to_end_migration_workflow(self, sample_model_old, sample_model_new):
         """E2E test: Complete migration workflow."""
-        from src.efcore_server import (
-            handle_analyze_entity,
-            handle_generate_migration
-        )
+        from src.efcore_server import handle_analyze_entity, handle_generate_migration
 
         # Step 1: Analyze old model
-        old_analysis = await handle_analyze_entity({
-            "file_path": str(sample_model_old)
-        })
+        old_analysis = await handle_analyze_entity({"file_path": str(sample_model_old)})
 
         # Just check we got entities
         assert len(old_analysis["entities"]) > 0
 
         # Step 2: Analyze new model
-        new_analysis = await handle_analyze_entity({
-            "file_path": str(sample_model_new)
-        })
+        new_analysis = await handle_analyze_entity({"file_path": str(sample_model_new)})
 
         # Just check we got entities
         assert len(new_analysis["entities"]) > 0
 
         # Step 3: Generate migration
-        migration_result = await handle_generate_migration({
-            "old_model_path": str(sample_model_old),
-            "new_model_path": str(sample_model_new),
-            "migration_name": "UpdateUserModel"
-        })
+        migration_result = await handle_generate_migration(
+            {
+                "old_model_path": str(sample_model_old),
+                "new_model_path": str(sample_model_new),
+                "migration_name": "UpdateUserModel",
+            }
+        )
 
         assert "migration_code" in migration_result
         assert len(migration_result["migration_code"]) > 0
@@ -287,9 +259,7 @@ class TestEFCoreAnalysisIntegration:
         invalid_file.write_text("this is not valid C# code {{{ }")
 
         # Should handle gracefully
-        result = await handle_analyze_entity({
-            "file_path": str(invalid_file)
-        })
+        result = await handle_analyze_entity({"file_path": str(invalid_file)})
 
         # Should return result (may be empty or with error)
         assert isinstance(result, dict)
@@ -298,7 +268,7 @@ class TestEFCoreAnalysisIntegration:
     async def test_analyze_dbcontext_multiple_configurations(self, temp_dir):
         """Test DbContext with various configurations."""
         dbcontext_file = temp_dir / "ComplexContext.cs"
-        dbcontext_file.write_text('''
+        dbcontext_file.write_text("""
 using Microsoft.EntityFrameworkCore;
 
 namespace MyApp.Data
@@ -321,13 +291,11 @@ namespace MyApp.Data
         }
     }
 }
-''')
+""")
 
         from src.efcore_server import handle_analyze_dbcontext
 
-        result = await handle_analyze_dbcontext({
-            "file_path": str(dbcontext_file)
-        })
+        result = await handle_analyze_dbcontext({"file_path": str(dbcontext_file)})
 
         assert "dbcontext" in result
         dbcontext = result["dbcontext"]

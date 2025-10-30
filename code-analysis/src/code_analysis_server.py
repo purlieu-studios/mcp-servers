@@ -1,10 +1,11 @@
 """Code Analysis MCP Server - AST parsing and code quality analysis."""
 
-import logging
 import asyncio
+import logging
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
+
 import mcp.types as types
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
@@ -12,14 +13,15 @@ from mcp.server.stdio import stdio_server
 # Add parent directory to path for shared imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from .analyzers.python_analyzer import PythonAnalyzer
-from .analyzers.javascript_analyzer import JavaScriptAnalyzer
-from .analyzers.csharp_analyzer import CSharpAnalyzer
-from .complexity import calculate_complexity
-from .code_smells import detect_code_smells
-from .dependency_analyzer import DependencyAnalyzer
-from .analysis_cache import get_cache
 from shared.workspace_state import get_workspace_state
+
+from .analysis_cache import get_cache
+from .analyzers.csharp_analyzer import CSharpAnalyzer
+from .analyzers.javascript_analyzer import JavaScriptAnalyzer
+from .analyzers.python_analyzer import PythonAnalyzer
+from .code_smells import detect_code_smells
+from .complexity import calculate_complexity
+from .dependency_analyzer import DependencyAnalyzer
 
 logger = logging.getLogger(__name__)
 
@@ -28,12 +30,12 @@ server = Server("code-analysis-server")
 
 # Initialize analyzers
 analyzers = {
-    '.py': PythonAnalyzer(),
-    '.js': JavaScriptAnalyzer(),
-    '.ts': JavaScriptAnalyzer(),
-    '.jsx': JavaScriptAnalyzer(),
-    '.tsx': JavaScriptAnalyzer(),
-    '.cs': CSharpAnalyzer(),
+    ".py": PythonAnalyzer(),
+    ".js": JavaScriptAnalyzer(),
+    ".ts": JavaScriptAnalyzer(),
+    ".jsx": JavaScriptAnalyzer(),
+    ".tsx": JavaScriptAnalyzer(),
+    ".cs": CSharpAnalyzer(),
 }
 
 dependency_analyzer = DependencyAnalyzer()
@@ -55,15 +57,15 @@ async def list_tools() -> list[types.Tool]:
                 "properties": {
                     "file_path": {
                         "type": "string",
-                        "description": "Path to the code file to parse"
+                        "description": "Path to the code file to parse",
                     },
                     "include_body": {
                         "type": "boolean",
-                        "description": "Include function/method bodies in output (default: false)"
-                    }
+                        "description": "Include function/method bodies in output (default: false)",
+                    },
                 },
-                "required": ["file_path"]
-            }
+                "required": ["file_path"],
+            },
         ),
         types.Tool(
             name="analyze_complexity",
@@ -73,15 +75,15 @@ async def list_tools() -> list[types.Tool]:
                 "properties": {
                     "file_path": {
                         "type": "string",
-                        "description": "Path to the code file to analyze"
+                        "description": "Path to the code file to analyze",
                     },
                     "function_name": {
                         "type": "string",
-                        "description": "Optional: specific function/method to analyze"
-                    }
+                        "description": "Optional: specific function/method to analyze",
+                    },
                 },
-                "required": ["file_path"]
-            }
+                "required": ["file_path"],
+            },
         ),
         types.Tool(
             name="find_code_smells",
@@ -91,16 +93,16 @@ async def list_tools() -> list[types.Tool]:
                 "properties": {
                     "file_path": {
                         "type": "string",
-                        "description": "Path to the code file to analyze"
+                        "description": "Path to the code file to analyze",
                     },
                     "severity": {
                         "type": "string",
                         "enum": ["low", "medium", "high", "all"],
-                        "description": "Minimum severity level (default: all)"
-                    }
+                        "description": "Minimum severity level (default: all)",
+                    },
                 },
-                "required": ["file_path"]
-            }
+                "required": ["file_path"],
+            },
         ),
         types.Tool(
             name="analyze_functions",
@@ -110,11 +112,11 @@ async def list_tools() -> list[types.Tool]:
                 "properties": {
                     "file_path": {
                         "type": "string",
-                        "description": "Path to the code file to analyze"
+                        "description": "Path to the code file to analyze",
                     }
                 },
-                "required": ["file_path"]
-            }
+                "required": ["file_path"],
+            },
         ),
         types.Tool(
             name="find_dependencies",
@@ -124,15 +126,15 @@ async def list_tools() -> list[types.Tool]:
                 "properties": {
                     "file_path": {
                         "type": "string",
-                        "description": "Path to the file or directory to analyze"
+                        "description": "Path to the file or directory to analyze",
                     },
                     "recursive": {
                         "type": "boolean",
-                        "description": "Recursively analyze all files in directory (default: false)"
-                    }
+                        "description": "Recursively analyze all files in directory (default: false)",
+                    },
                 },
-                "required": ["file_path"]
-            }
+                "required": ["file_path"],
+            },
         ),
         types.Tool(
             name="analyze_classes",
@@ -142,19 +144,16 @@ async def list_tools() -> list[types.Tool]:
                 "properties": {
                     "file_path": {
                         "type": "string",
-                        "description": "Path to the code file to analyze"
+                        "description": "Path to the code file to analyze",
                     }
                 },
-                "required": ["file_path"]
-            }
+                "required": ["file_path"],
+            },
         ),
         types.Tool(
             name="get_cache_stats",
             description="Get analysis cache statistics (hit rate, size, entries)",
-            inputSchema={
-                "type": "object",
-                "properties": {}
-            }
+            inputSchema={"type": "object", "properties": {}},
         ),
         types.Tool(
             name="clear_cache",
@@ -164,11 +163,11 @@ async def list_tools() -> list[types.Tool]:
                 "properties": {
                     "older_than_days": {
                         "type": "integer",
-                        "description": "Clear only entries older than this many days (optional)"
+                        "description": "Clear only entries older than this many days (optional)",
                     }
-                }
-            }
-        )
+                },
+            },
+        ),
     ]
 
 
@@ -199,13 +198,10 @@ async def call_tool(name: str, arguments: Any) -> list[types.TextContent]:
 
     except Exception as e:
         logger.error(f"Error in tool {name}: {e}", exc_info=True)
-        return [types.TextContent(
-            type="text",
-            text=f"Error: {str(e)}"
-        )]
+        return [types.TextContent(type="text", text=f"Error: {str(e)}")]
 
 
-async def handle_parse_ast(arguments: Dict[str, Any]) -> Dict[str, Any]:
+async def handle_parse_ast(arguments: dict[str, Any]) -> dict[str, Any]:
     """Parse file and return AST."""
     file_path = Path(arguments["file_path"])
     include_body = arguments.get("include_body", False)
@@ -233,7 +229,7 @@ async def handle_parse_ast(arguments: Dict[str, Any]) -> Dict[str, Any]:
         "file_path": str(file_path),
         "language": analyzer.language,
         "ast": ast_data,
-        "_cached": False
+        "_cached": False,
     }
 
     # Store in cache
@@ -243,7 +239,7 @@ async def handle_parse_ast(arguments: Dict[str, Any]) -> Dict[str, Any]:
     return result
 
 
-async def handle_analyze_complexity(arguments: Dict[str, Any]) -> Dict[str, Any]:
+async def handle_analyze_complexity(arguments: dict[str, Any]) -> dict[str, Any]:
     """Analyze code complexity."""
     file_path = Path(arguments["file_path"])
     function_name = arguments.get("function_name")
@@ -264,17 +260,9 @@ async def handle_analyze_complexity(arguments: Dict[str, Any]) -> Dict[str, Any]
         return cached_result
 
     # Calculate complexity metrics
-    complexity_data = await calculate_complexity(
-        file_path,
-        analyzer,
-        function_name=function_name
-    )
+    complexity_data = await calculate_complexity(file_path, analyzer, function_name=function_name)
 
-    result = {
-        "file_path": str(file_path),
-        "complexity": complexity_data,
-        "_cached": False
-    }
+    result = {"file_path": str(file_path), "complexity": complexity_data, "_cached": False}
 
     # Store in cache
     cache.set(file_path, cache_key, result)
@@ -282,14 +270,11 @@ async def handle_analyze_complexity(arguments: Dict[str, Any]) -> Dict[str, Any]
 
     # Log to workspace
     try:
-        workspace_state.add_focus_file(
-            file_path=str(file_path),
-            reason="complexity_analysis"
-        )
+        workspace_state.add_focus_file(file_path=str(file_path), reason="complexity_analysis")
         workspace_state.add_query(
             server="code-analysis",
             tool="analyze_complexity",
-            metadata={"file": str(file_path), "function": function_name}
+            metadata={"file": str(file_path), "function": function_name},
         )
     except Exception as e:
         logger.error(f"Error updating workspace: {e}")
@@ -297,7 +282,7 @@ async def handle_analyze_complexity(arguments: Dict[str, Any]) -> Dict[str, Any]
     return result
 
 
-async def handle_find_code_smells(arguments: Dict[str, Any]) -> Dict[str, Any]:
+async def handle_find_code_smells(arguments: dict[str, Any]) -> dict[str, Any]:
     """Find code smells and quality issues."""
     file_path = Path(arguments["file_path"])
     severity = arguments.get("severity", "all")
@@ -318,17 +303,13 @@ async def handle_find_code_smells(arguments: Dict[str, Any]) -> Dict[str, Any]:
         return cached_result
 
     # Detect code smells
-    smells = await detect_code_smells(
-        file_path,
-        analyzer,
-        min_severity=severity
-    )
+    smells = await detect_code_smells(file_path, analyzer, min_severity=severity)
 
     result = {
         "file_path": str(file_path),
         "code_smells": smells,
         "total_issues": len(smells),
-        "_cached": False
+        "_cached": False,
     }
 
     # Store in cache
@@ -338,7 +319,7 @@ async def handle_find_code_smells(arguments: Dict[str, Any]) -> Dict[str, Any]:
     return result
 
 
-async def handle_analyze_functions(arguments: Dict[str, Any]) -> Dict[str, Any]:
+async def handle_analyze_functions(arguments: dict[str, Any]) -> dict[str, Any]:
     """Analyze functions and methods."""
     file_path = Path(arguments["file_path"])
 
@@ -364,7 +345,7 @@ async def handle_analyze_functions(arguments: Dict[str, Any]) -> Dict[str, Any]:
         "file_path": str(file_path),
         "functions": functions,
         "function_count": len(functions),
-        "_cached": False
+        "_cached": False,
     }
 
     # Store in cache
@@ -374,7 +355,7 @@ async def handle_analyze_functions(arguments: Dict[str, Any]) -> Dict[str, Any]:
     return result
 
 
-async def handle_analyze_classes(arguments: Dict[str, Any]) -> Dict[str, Any]:
+async def handle_analyze_classes(arguments: dict[str, Any]) -> dict[str, Any]:
     """Analyze class definitions."""
     file_path = Path(arguments["file_path"])
 
@@ -400,7 +381,7 @@ async def handle_analyze_classes(arguments: Dict[str, Any]) -> Dict[str, Any]:
         "file_path": str(file_path),
         "classes": classes,
         "class_count": len(classes),
-        "_cached": False
+        "_cached": False,
     }
 
     # Store in cache
@@ -410,7 +391,7 @@ async def handle_analyze_classes(arguments: Dict[str, Any]) -> Dict[str, Any]:
     return result
 
 
-async def handle_find_dependencies(arguments: Dict[str, Any]) -> Dict[str, Any]:
+async def handle_find_dependencies(arguments: dict[str, Any]) -> dict[str, Any]:
     """Analyze file dependencies."""
     file_path = Path(arguments["file_path"])
     recursive = arguments.get("recursive", False)
@@ -419,25 +400,21 @@ async def handle_find_dependencies(arguments: Dict[str, Any]) -> Dict[str, Any]:
         raise FileNotFoundError(f"Path not found: {file_path}")
 
     # Analyze dependencies
-    dependencies = await dependency_analyzer.analyze(
-        file_path,
-        recursive=recursive
-    )
+    dependencies = await dependency_analyzer.analyze(file_path, recursive=recursive)
 
-    return {
-        "path": str(file_path),
-        "dependencies": dependencies
-    }
+    return {"path": str(file_path), "dependencies": dependencies}
 
 
-def handle_get_cache_stats() -> Dict[str, Any]:
+def handle_get_cache_stats() -> dict[str, Any]:
     """Get cache statistics."""
     stats = cache.get_stats()
-    logger.info(f"Cache stats: {stats['hit_rate_percent']}% hit rate, {stats['cache_entries']} entries")
+    logger.info(
+        f"Cache stats: {stats['hit_rate_percent']}% hit rate, {stats['cache_entries']} entries"
+    )
     return stats
 
 
-def handle_clear_cache(arguments: Dict[str, Any]) -> Dict[str, Any]:
+def handle_clear_cache(arguments: dict[str, Any]) -> dict[str, Any]:
     """Clear analysis cache."""
     older_than_days = arguments.get("older_than_days")
 
@@ -449,11 +426,7 @@ def handle_clear_cache(arguments: Dict[str, Any]) -> Dict[str, Any]:
 
     logger.info(message)
 
-    return {
-        "cleared_entries": cleared,
-        "message": message,
-        "cache_stats": cache.get_stats()
-    }
+    return {"cleared_entries": cleared, "message": message, "cache_stats": cache.get_stats()}
 
 
 async def main():
@@ -461,11 +434,7 @@ async def main():
     logger.info("Starting Code Analysis MCP Server...")
 
     async with stdio_server() as (read_stream, write_stream):
-        await server.run(
-            read_stream,
-            write_stream,
-            server.create_initialization_options()
-        )
+        await server.run(read_stream, write_stream, server.create_initialization_options())
 
 
 if __name__ == "__main__":

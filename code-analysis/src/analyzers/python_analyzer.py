@@ -1,9 +1,8 @@
 """Python code analyzer using AST."""
 
 import ast
-import asyncio
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
 class PythonAnalyzer:
@@ -12,27 +11,23 @@ class PythonAnalyzer:
     def __init__(self):
         self.language = "python"
 
-    async def parse_file(self, file_path: Path, include_body: bool = False) -> Dict[str, Any]:
+    async def parse_file(self, file_path: Path, include_body: bool = False) -> dict[str, Any]:
         """Parse Python file and return AST structure."""
-        content = file_path.read_text(encoding='utf-8')
+        content = file_path.read_text(encoding="utf-8")
 
         try:
             tree = ast.parse(content, filename=str(file_path))
         except SyntaxError as e:
-            return {
-                "error": f"Syntax error: {e.msg}",
-                "line": e.lineno,
-                "offset": e.offset
-            }
+            return {"error": f"Syntax error: {e.msg}", "line": e.lineno, "offset": e.offset}
 
         return {
             "type": "Module",
-            "body": [self._node_to_dict(node, include_body) for node in tree.body]
+            "body": [self._node_to_dict(node, include_body) for node in tree.body],
         }
 
-    async def analyze_functions(self, file_path: Path) -> List[Dict[str, Any]]:
+    async def analyze_functions(self, file_path: Path) -> list[dict[str, Any]]:
         """Extract all functions and their signatures."""
-        content = file_path.read_text(encoding='utf-8')
+        content = file_path.read_text(encoding="utf-8")
 
         try:
             tree = ast.parse(content, filename=str(file_path))
@@ -51,15 +46,15 @@ class PythonAnalyzer:
                     "return_type": self._extract_type_annotation(node.returns),
                     "decorators": [self._get_decorator_name(d) for d in node.decorator_list],
                     "docstring": ast.get_docstring(node),
-                    "is_method": self._is_method(node, tree)
+                    "is_method": self._is_method(node, tree),
                 }
                 functions.append(func_info)
 
         return functions
 
-    async def analyze_classes(self, file_path: Path) -> List[Dict[str, Any]]:
+    async def analyze_classes(self, file_path: Path) -> list[dict[str, Any]]:
         """Extract all classes and their structure."""
-        content = file_path.read_text(encoding='utf-8')
+        content = file_path.read_text(encoding="utf-8")
 
         try:
             tree = ast.parse(content, filename=str(file_path))
@@ -77,7 +72,7 @@ class PythonAnalyzer:
                     "decorators": [self._get_decorator_name(d) for d in node.decorator_list],
                     "docstring": ast.get_docstring(node),
                     "methods": [],
-                    "properties": []
+                    "properties": [],
                 }
 
                 # Extract methods and properties
@@ -86,11 +81,20 @@ class PythonAnalyzer:
                         method_info = {
                             "name": item.name,
                             "line": item.lineno,
-                            "is_static": any(self._get_decorator_name(d) == "staticmethod" for d in item.decorator_list),
-                            "is_class_method": any(self._get_decorator_name(d) == "classmethod" for d in item.decorator_list),
-                            "is_property": any(self._get_decorator_name(d) == "property" for d in item.decorator_list),
+                            "is_static": any(
+                                self._get_decorator_name(d) == "staticmethod"
+                                for d in item.decorator_list
+                            ),
+                            "is_class_method": any(
+                                self._get_decorator_name(d) == "classmethod"
+                                for d in item.decorator_list
+                            ),
+                            "is_property": any(
+                                self._get_decorator_name(d) == "property"
+                                for d in item.decorator_list
+                            ),
                             "parameters": self._extract_parameters(item),
-                            "return_type": self._extract_type_annotation(item.returns)
+                            "return_type": self._extract_type_annotation(item.returns),
                         }
 
                         if method_info["is_property"]:
@@ -102,30 +106,31 @@ class PythonAnalyzer:
 
         return classes
 
-    def _node_to_dict(self, node: ast.AST, include_body: bool = False) -> Dict[str, Any]:
+    def _node_to_dict(self, node: ast.AST, include_body: bool = False) -> dict[str, Any]:
         """Convert AST node to dictionary."""
-        node_dict = {
-            "type": node.__class__.__name__,
-            "line": getattr(node, 'lineno', None)
-        }
+        node_dict = {"type": node.__class__.__name__, "line": getattr(node, "lineno", None)}
 
         if isinstance(node, ast.FunctionDef):
-            node_dict.update({
-                "name": node.name,
-                "parameters": self._extract_parameters(node),
-                "return_type": self._extract_type_annotation(node.returns),
-                "decorators": [self._get_decorator_name(d) for d in node.decorator_list],
-                "is_async": isinstance(node, ast.AsyncFunctionDef)
-            })
+            node_dict.update(
+                {
+                    "name": node.name,
+                    "parameters": self._extract_parameters(node),
+                    "return_type": self._extract_type_annotation(node.returns),
+                    "decorators": [self._get_decorator_name(d) for d in node.decorator_list],
+                    "is_async": isinstance(node, ast.AsyncFunctionDef),
+                }
+            )
             if include_body:
                 node_dict["body"] = [self._node_to_dict(n, include_body) for n in node.body]
 
         elif isinstance(node, ast.ClassDef):
-            node_dict.update({
-                "name": node.name,
-                "bases": [self._get_base_name(b) for b in node.bases],
-                "decorators": [self._get_decorator_name(d) for d in node.decorator_list]
-            })
+            node_dict.update(
+                {
+                    "name": node.name,
+                    "bases": [self._get_base_name(b) for b in node.bases],
+                    "decorators": [self._get_decorator_name(d) for d in node.decorator_list],
+                }
+            )
             if include_body:
                 node_dict["body"] = [self._node_to_dict(n, include_body) for n in node.body]
 
@@ -133,23 +138,22 @@ class PythonAnalyzer:
             node_dict["names"] = [alias.name for alias in node.names]
 
         elif isinstance(node, ast.ImportFrom):
-            node_dict.update({
-                "module": node.module,
-                "names": [alias.name for alias in node.names]
-            })
+            node_dict.update({"module": node.module, "names": [alias.name for alias in node.names]})
 
         elif isinstance(node, ast.Assign):
             node_dict["targets"] = [self._get_node_name(t) for t in node.targets]
 
         elif isinstance(node, ast.AnnAssign):
-            node_dict.update({
-                "target": self._get_node_name(node.target),
-                "annotation": self._extract_type_annotation(node.annotation)
-            })
+            node_dict.update(
+                {
+                    "target": self._get_node_name(node.target),
+                    "annotation": self._extract_type_annotation(node.annotation),
+                }
+            )
 
         return node_dict
 
-    def _extract_parameters(self, func_node: ast.FunctionDef) -> List[Dict[str, Any]]:
+    def _extract_parameters(self, func_node: ast.FunctionDef) -> list[dict[str, Any]]:
         """Extract function parameters with type annotations."""
         params = []
 
@@ -160,36 +164,44 @@ class PythonAnalyzer:
             param = {
                 "name": arg.arg,
                 "type": self._extract_type_annotation(arg.annotation),
-                "default": None
+                "default": None,
             }
 
             # Check if this arg has a default value
             default_offset = len(args.args) - len(args.defaults)
             if i >= default_offset:
                 default_idx = i - default_offset
-                param["default"] = ast.unparse(args.defaults[default_idx]) if default_idx < len(args.defaults) else None
+                param["default"] = (
+                    ast.unparse(args.defaults[default_idx])
+                    if default_idx < len(args.defaults)
+                    else None
+                )
 
             params.append(param)
 
         # *args
         if args.vararg:
-            params.append({
-                "name": f"*{args.vararg.arg}",
-                "type": self._extract_type_annotation(args.vararg.annotation),
-                "default": None
-            })
+            params.append(
+                {
+                    "name": f"*{args.vararg.arg}",
+                    "type": self._extract_type_annotation(args.vararg.annotation),
+                    "default": None,
+                }
+            )
 
         # **kwargs
         if args.kwarg:
-            params.append({
-                "name": f"**{args.kwarg.arg}",
-                "type": self._extract_type_annotation(args.kwarg.annotation),
-                "default": None
-            })
+            params.append(
+                {
+                    "name": f"**{args.kwarg.arg}",
+                    "type": self._extract_type_annotation(args.kwarg.annotation),
+                    "default": None,
+                }
+            )
 
         return params
 
-    def _extract_type_annotation(self, annotation: Optional[ast.AST]) -> Optional[str]:
+    def _extract_type_annotation(self, annotation: ast.AST | None) -> str | None:
         """Extract type annotation as string."""
         if annotation is None:
             return None
@@ -239,9 +251,11 @@ class PythonAnalyzer:
                     return True
         return False
 
-    async def calculate_cyclomatic_complexity(self, file_path: Path, function_name: Optional[str] = None) -> Dict[str, int]:
+    async def calculate_cyclomatic_complexity(
+        self, file_path: Path, function_name: str | None = None
+    ) -> dict[str, int]:
         """Calculate cyclomatic complexity."""
-        content = file_path.read_text(encoding='utf-8')
+        content = file_path.read_text(encoding="utf-8")
 
         try:
             tree = ast.parse(content, filename=str(file_path))

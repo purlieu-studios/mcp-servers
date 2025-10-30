@@ -8,8 +8,8 @@ import json
 import logging
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, List, Optional
 from threading import Lock
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +23,7 @@ class WorkspaceState:
     MAX_ACTIVE_TASKS = 10
     CLEANUP_DAYS = 7
 
-    def __init__(self, workspace_dir: Optional[Path] = None):
+    def __init__(self, workspace_dir: Path | None = None):
         """Initialize workspace state manager.
 
         Args:
@@ -36,11 +36,11 @@ class WorkspaceState:
         self.workspace_dir = Path(workspace_dir)
         self.workspace_file = self.workspace_dir / ".claude-workspace.json"
         self._lock = Lock()
-        self._state: Optional[Dict[str, Any]] = None
+        self._state: dict[str, Any] | None = None
 
         logger.info(f"Initialized workspace state at {self.workspace_file}")
 
-    def _default_state(self) -> Dict[str, Any]:
+    def _default_state(self) -> dict[str, Any]:
         """Create default workspace state."""
         return {
             "version": self.VERSION,
@@ -51,11 +51,11 @@ class WorkspaceState:
             "session_metadata": {
                 "session_start": datetime.now().isoformat(),
                 "total_queries": 0,
-                "servers_used": []
-            }
+                "servers_used": [],
+            },
         }
 
-    def load(self) -> Dict[str, Any]:
+    def load(self) -> dict[str, Any]:
         """Load workspace state from file.
 
         Returns:
@@ -69,16 +69,18 @@ class WorkspaceState:
                 return self._state.copy()
 
             try:
-                with open(self.workspace_file, 'r', encoding='utf-8') as f:
+                with open(self.workspace_file, encoding="utf-8") as f:
                     self._state = json.load(f)
 
                 # Validate version
-                if self._state.get('version') != self.VERSION:
-                    logger.warning(f"Workspace version mismatch, resetting")
+                if self._state.get("version") != self.VERSION:
+                    logger.warning("Workspace version mismatch, resetting")
                     self._state = self._default_state()
                     self._save_unlocked()
 
-                logger.debug(f"Loaded workspace state with {len(self._state.get('focus_files', []))} focus files")
+                logger.debug(
+                    f"Loaded workspace state with {len(self._state.get('focus_files', []))} focus files"
+                )
                 return self._state.copy()
 
             except (json.JSONDecodeError, Exception) as e:
@@ -87,7 +89,7 @@ class WorkspaceState:
                 self._save_unlocked()
                 return self._state.copy()
 
-    def save(self, state: Optional[Dict[str, Any]] = None):
+    def save(self, state: dict[str, Any] | None = None):
         """Save workspace state to file.
 
         Args:
@@ -100,7 +102,7 @@ class WorkspaceState:
             if self._state is None:
                 self._state = self._default_state()
 
-            self._state['last_updated'] = datetime.now().isoformat()
+            self._state["last_updated"] = datetime.now().isoformat()
             self._save_unlocked()
 
     def _save_unlocked(self):
@@ -109,17 +111,14 @@ class WorkspaceState:
             return
 
         try:
-            with open(self.workspace_file, 'w', encoding='utf-8') as f:
+            with open(self.workspace_file, "w", encoding="utf-8") as f:
                 json.dump(self._state, f, indent=2, ensure_ascii=False)
             logger.debug("Saved workspace state")
         except Exception as e:
             logger.error(f"Error saving workspace state: {e}")
 
     def add_focus_file(
-        self,
-        file_path: str,
-        reason: str = "viewing",
-        metadata: Optional[Dict[str, Any]] = None
+        self, file_path: str, reason: str = "viewing", metadata: dict[str, Any] | None = None
     ):
         """Add file to focus list.
 
@@ -132,16 +131,16 @@ class WorkspaceState:
             if self._state is None:
                 self._state = self.load()
 
-            focus_files = self._state.setdefault('focus_files', [])
+            focus_files = self._state.setdefault("focus_files", [])
 
             # Remove if already exists
-            focus_files = [f for f in focus_files if f['path'] != file_path]
+            focus_files = [f for f in focus_files if f["path"] != file_path]
 
             # Add new entry
             entry = {
                 "path": file_path,
                 "last_accessed": datetime.now().isoformat(),
-                "reason": reason
+                "reason": reason,
             }
             if metadata:
                 entry.update(metadata)
@@ -149,7 +148,7 @@ class WorkspaceState:
             focus_files.insert(0, entry)
 
             # Limit size
-            self._state['focus_files'] = focus_files[:self.MAX_FOCUS_FILES]
+            self._state["focus_files"] = focus_files[: self.MAX_FOCUS_FILES]
             self._save_unlocked()
 
         logger.debug(f"Added focus file: {file_path} ({reason})")
@@ -157,9 +156,9 @@ class WorkspaceState:
     def add_query(
         self,
         server: str,
-        query: Optional[str] = None,
-        tool: Optional[str] = None,
-        metadata: Optional[Dict[str, Any]] = None
+        query: str | None = None,
+        tool: str | None = None,
+        metadata: dict[str, Any] | None = None,
     ):
         """Add query to recent queries.
 
@@ -173,31 +172,28 @@ class WorkspaceState:
             if self._state is None:
                 self._state = self.load()
 
-            recent_queries = self._state.setdefault('recent_queries', [])
+            recent_queries = self._state.setdefault("recent_queries", [])
 
-            entry = {
-                "server": server,
-                "timestamp": datetime.now().isoformat()
-            }
+            entry = {"server": server, "timestamp": datetime.now().isoformat()}
             if query:
-                entry['query'] = query
+                entry["query"] = query
             if tool:
-                entry['tool'] = tool
+                entry["tool"] = tool
             if metadata:
                 entry.update(metadata)
 
             recent_queries.insert(0, entry)
 
             # Limit size
-            self._state['recent_queries'] = recent_queries[:self.MAX_RECENT_QUERIES]
+            self._state["recent_queries"] = recent_queries[: self.MAX_RECENT_QUERIES]
 
             # Update session metadata
-            session_meta = self._state.setdefault('session_metadata', {})
-            session_meta['total_queries'] = session_meta.get('total_queries', 0) + 1
+            session_meta = self._state.setdefault("session_metadata", {})
+            session_meta["total_queries"] = session_meta.get("total_queries", 0) + 1
 
-            servers_used = set(session_meta.get('servers_used', []))
+            servers_used = set(session_meta.get("servers_used", []))
             servers_used.add(server)
-            session_meta['servers_used'] = sorted(servers_used)
+            session_meta["servers_used"] = sorted(servers_used)
 
             self._save_unlocked()
 
@@ -207,8 +203,8 @@ class WorkspaceState:
         self,
         description: str,
         status: str = "pending",
-        files: Optional[List[str]] = None,
-        metadata: Optional[Dict[str, Any]] = None
+        files: list[str] | None = None,
+        metadata: dict[str, Any] | None = None,
     ):
         """Add active task.
 
@@ -222,13 +218,13 @@ class WorkspaceState:
             if self._state is None:
                 self._state = self.load()
 
-            active_tasks = self._state.setdefault('active_tasks', [])
+            active_tasks = self._state.setdefault("active_tasks", [])
 
             entry = {
                 "description": description,
                 "status": status,
                 "created": datetime.now().isoformat(),
-                "files": files or []
+                "files": files or [],
             }
             if metadata:
                 entry.update(metadata)
@@ -237,10 +233,11 @@ class WorkspaceState:
 
             # Limit size (keep only non-completed or recent completed)
             active_tasks = [
-                t for t in active_tasks
-                if t['status'] != 'completed' or self._is_recent(t.get('created'))
+                t
+                for t in active_tasks
+                if t["status"] != "completed" or self._is_recent(t.get("created"))
             ]
-            self._state['active_tasks'] = active_tasks[:self.MAX_ACTIVE_TASKS]
+            self._state["active_tasks"] = active_tasks[: self.MAX_ACTIVE_TASKS]
 
             self._save_unlocked()
 
@@ -257,19 +254,19 @@ class WorkspaceState:
             if self._state is None:
                 self._state = self.load()
 
-            active_tasks = self._state.get('active_tasks', [])
+            active_tasks = self._state.get("active_tasks", [])
 
             for task in active_tasks:
-                if task['description'] == description:
-                    task['status'] = status
-                    task['updated'] = datetime.now().isoformat()
+                if task["description"] == description:
+                    task["status"] = status
+                    task["updated"] = datetime.now().isoformat()
                     break
 
             self._save_unlocked()
 
         logger.debug(f"Updated task status: {description} -> {status}")
 
-    def get_focus_files(self, limit: Optional[int] = None) -> List[Dict[str, Any]]:
+    def get_focus_files(self, limit: int | None = None) -> list[dict[str, Any]]:
         """Get focus files.
 
         Args:
@@ -282,16 +279,14 @@ class WorkspaceState:
             if self._state is None:
                 self._state = self.load()
 
-            focus_files = self._state.get('focus_files', [])
+            focus_files = self._state.get("focus_files", [])
             if limit:
                 return focus_files[:limit]
             return focus_files.copy()
 
     def get_recent_queries(
-        self,
-        server: Optional[str] = None,
-        limit: Optional[int] = None
-    ) -> List[Dict[str, Any]]:
+        self, server: str | None = None, limit: int | None = None
+    ) -> list[dict[str, Any]]:
         """Get recent queries.
 
         Args:
@@ -305,16 +300,16 @@ class WorkspaceState:
             if self._state is None:
                 self._state = self.load()
 
-            queries = self._state.get('recent_queries', [])
+            queries = self._state.get("recent_queries", [])
 
             if server:
-                queries = [q for q in queries if q.get('server') == server]
+                queries = [q for q in queries if q.get("server") == server]
 
             if limit:
                 return queries[:limit]
             return queries.copy()
 
-    def get_active_tasks(self, status: Optional[str] = None) -> List[Dict[str, Any]]:
+    def get_active_tasks(self, status: str | None = None) -> list[dict[str, Any]]:
         """Get active tasks.
 
         Args:
@@ -327,14 +322,14 @@ class WorkspaceState:
             if self._state is None:
                 self._state = self.load()
 
-            tasks = self._state.get('active_tasks', [])
+            tasks = self._state.get("active_tasks", [])
 
             if status:
-                tasks = [t for t in tasks if t.get('status') == status]
+                tasks = [t for t in tasks if t.get("status") == status]
 
             return tasks.copy()
 
-    def get_session_metadata(self) -> Dict[str, Any]:
+    def get_session_metadata(self) -> dict[str, Any]:
         """Get session metadata.
 
         Returns:
@@ -344,9 +339,9 @@ class WorkspaceState:
             if self._state is None:
                 self._state = self.load()
 
-            return self._state.get('session_metadata', {}).copy()
+            return self._state.get("session_metadata", {}).copy()
 
-    def get_full_state(self) -> Dict[str, Any]:
+    def get_full_state(self) -> dict[str, Any]:
         """Get full workspace state.
 
         Returns:
@@ -365,24 +360,21 @@ class WorkspaceState:
                 self._state = self.load()
 
             # Clean focus files
-            focus_files = self._state.get('focus_files', [])
-            self._state['focus_files'] = [
-                f for f in focus_files
-                if self._is_recent(f.get('last_accessed'))
+            focus_files = self._state.get("focus_files", [])
+            self._state["focus_files"] = [
+                f for f in focus_files if self._is_recent(f.get("last_accessed"))
             ]
 
             # Clean queries
-            queries = self._state.get('recent_queries', [])
-            self._state['recent_queries'] = [
-                q for q in queries
-                if self._is_recent(q.get('timestamp'))
+            queries = self._state.get("recent_queries", [])
+            self._state["recent_queries"] = [
+                q for q in queries if self._is_recent(q.get("timestamp"))
             ]
 
             # Clean completed tasks
-            tasks = self._state.get('active_tasks', [])
-            self._state['active_tasks'] = [
-                t for t in tasks
-                if t['status'] != 'completed' or self._is_recent(t.get('created'))
+            tasks = self._state.get("active_tasks", [])
+            self._state["active_tasks"] = [
+                t for t in tasks if t["status"] != "completed" or self._is_recent(t.get("created"))
             ]
 
             self._save_unlocked()
@@ -397,7 +389,7 @@ class WorkspaceState:
 
         logger.info("Cleared workspace state")
 
-    def _is_recent(self, timestamp_str: Optional[str]) -> bool:
+    def _is_recent(self, timestamp_str: str | None) -> bool:
         """Check if timestamp is within CLEANUP_DAYS.
 
         Args:
@@ -418,11 +410,11 @@ class WorkspaceState:
 
 
 # Global instance
-_workspace_instance: Optional[WorkspaceState] = None
+_workspace_instance: WorkspaceState | None = None
 _instance_lock = Lock()
 
 
-def get_workspace_state(workspace_dir: Optional[Path] = None) -> WorkspaceState:
+def get_workspace_state(workspace_dir: Path | None = None) -> WorkspaceState:
     """Get or create global workspace state instance.
 
     Args:

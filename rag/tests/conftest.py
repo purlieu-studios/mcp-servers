@@ -1,11 +1,12 @@
 """Pytest configuration and shared fixtures for RAG server tests."""
-import os
-import tempfile
+
 import shutil
+import tempfile
+from collections.abc import Generator
 from pathlib import Path
-from typing import Generator
-import pytest
+
 import numpy as np
+import pytest
 
 
 @pytest.fixture
@@ -63,7 +64,7 @@ class Calculator:
 @pytest.fixture
 def sample_code_javascript() -> str:
     """Sample JavaScript code for testing."""
-    return '''
+    return """
 function fetchUserData(userId) {
     return fetch(`/api/users/${userId}`)
         .then(response => response.json())
@@ -90,13 +91,13 @@ class UserManager {
         return this.users.get(id);
     }
 }
-'''
+"""
 
 
 @pytest.fixture
 def sample_markdown() -> str:
     """Sample Markdown document for testing."""
-    return '''# Documentation Guide
+    return """# Documentation Guide
 
 ## Introduction
 
@@ -131,7 +132,7 @@ Vector databases store embeddings efficiently and allow fast similarity search.
 ### Chunking Strategies
 
 Different chunking strategies work better for different document types.
-'''
+"""
 
 
 @pytest.fixture
@@ -141,25 +142,25 @@ def sample_files(temp_dir: Path) -> dict[str, Path]:
 
     # Python file
     py_file = temp_dir / "test.py"
-    py_file.write_text('''
+    py_file.write_text("""
 def hello_world():
     print("Hello, World!")
 
 if __name__ == "__main__":
     hello_world()
-''')
-    files['python'] = py_file
+""")
+    files["python"] = py_file
 
     # JavaScript file
     js_file = temp_dir / "test.js"
-    js_file.write_text('''
+    js_file.write_text("""
 console.log("Hello, World!");
-''')
-    files['javascript'] = js_file
+""")
+    files["javascript"] = js_file
 
     # Markdown file
     md_file = temp_dir / "README.md"
-    md_file.write_text('''# Test Project
+    md_file.write_text("""# Test Project
 
 This is a test project.
 
@@ -167,16 +168,16 @@ This is a test project.
 
 - Feature 1
 - Feature 2
-''')
-    files['markdown'] = md_file
+""")
+    files["markdown"] = md_file
 
     # Text file
     txt_file = temp_dir / "notes.txt"
-    txt_file.write_text('''These are some notes.
+    txt_file.write_text("""These are some notes.
 Line 2 of notes.
 Line 3 of notes.
-''')
-    files['text'] = txt_file
+""")
+    files["text"] = txt_file
 
     return files
 
@@ -185,11 +186,11 @@ Line 3 of notes.
 def mock_embeddings() -> np.ndarray:
     """Generate mock embeddings for testing."""
     np.random.seed(42)
-    return np.random.rand(5, 768).astype('float32')
+    return np.random.rand(5, 768).astype("float32")
 
 
 @pytest.fixture
 def normalized_mock_embeddings(mock_embeddings: np.ndarray) -> np.ndarray:
     """Generate normalized mock embeddings for testing."""
     norms = np.linalg.norm(mock_embeddings, axis=1, keepdims=True)
-    return (mock_embeddings / norms).astype('float32')
+    return (mock_embeddings / norms).astype("float32")

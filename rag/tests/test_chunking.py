@@ -1,6 +1,6 @@
 """Tests for text chunking module."""
-import pytest
-from src.chunking import RecursiveChunker, chunk_text, Chunk
+
+from src.chunking import Chunk, RecursiveChunker, chunk_text
 
 
 class TestChunk:
@@ -72,7 +72,7 @@ class TestRecursiveChunker:
         assert len(chunks) > 1
         # Check that chunks overlap
         for i in range(len(chunks) - 1):
-            assert chunks[i].end_char > chunks[i+1].start_char
+            assert chunks[i].end_char > chunks[i + 1].start_char
 
     def test_chunk_overlap(self):
         """Test that chunks have proper overlap."""
@@ -83,7 +83,7 @@ class TestRecursiveChunker:
         assert len(chunks) >= 2
         # Verify overlap between consecutive chunks
         for i in range(len(chunks) - 1):
-            overlap_start = chunks[i+1].start_char
+            overlap_start = chunks[i + 1].start_char
             overlap_end = chunks[i].end_char
             actual_overlap = overlap_end - overlap_start
             assert actual_overlap <= chunker.overlap
@@ -95,7 +95,7 @@ class TestRecursiveChunker:
         chunks = chunker.chunk(text)
 
         # At least one chunk should end with a period
-        assert any(chunk.text.strip().endswith('.') for chunk in chunks)
+        assert any(chunk.text.strip().endswith(".") for chunk in chunks)
 
     def test_chunk_with_newlines(self):
         """Test chunking with newline separators."""
@@ -118,7 +118,7 @@ class TestRecursiveChunker:
             assert chunk.start_char < chunk.end_char
 
             # Check that text matches positions
-            assert text[chunk.start_char:chunk.end_char] == chunk.text
+            assert text[chunk.start_char : chunk.end_char] == chunk.text
 
     def test_chunk_coverage(self):
         """Test that all text is covered by chunks."""
@@ -146,7 +146,7 @@ class TestRecursiveChunker:
         break_point = chunker._find_break_point(text, 0, 30)
 
         # Should break at paragraph boundary
-        assert text[break_point-2:break_point] == "\n\n" or break_point == 30
+        assert text[break_point - 2 : break_point] == "\n\n" or break_point == 30
 
     def test_find_break_point_with_sentence(self):
         """Test finding break point with sentence separator."""
@@ -185,7 +185,7 @@ class TestRecursiveChunker:
 
         assert len(chunks) >= 2
         # Should prefer to break at double newlines (markdown paragraphs)
-        paragraph_breaks = sum(1 for chunk in chunks if '\n\n' in chunk.text)
+        paragraph_breaks = sum(1 for chunk in chunks if "\n\n" in chunk.text)
         assert paragraph_breaks > 0
 
     def test_chunk_very_small_chunk_size(self):

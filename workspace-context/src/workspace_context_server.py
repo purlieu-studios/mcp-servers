@@ -8,21 +8,20 @@ import asyncio
 import logging
 import sys
 from pathlib import Path
-from typing import Any, Dict
 
 # Add parent directory to path for shared imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from mcp.server import Server
-from mcp.types import Tool, TextContent
+from mcp.types import TextContent, Tool
+
+from shared.workspace_state import get_workspace_state
 
 from .context_analyzer import ContextAnalyzer
-from shared.workspace_state import get_workspace_state
 
 # Set up logging
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -53,20 +52,20 @@ class WorkspaceContextServer:
                             "limit": {
                                 "type": "number",
                                 "description": "Maximum recommendations (default: 10)",
-                                "default": 10
+                                "default": 10,
                             },
                             "include_dependencies": {
                                 "type": "boolean",
                                 "description": "Include dependency-based recommendations (default: true)",
-                                "default": True
+                                "default": True,
                             },
                             "include_patterns": {
                                 "type": "boolean",
                                 "description": "Include pattern-based recommendations (default: true)",
-                                "default": True
-                            }
-                        }
-                    }
+                                "default": True,
+                            },
+                        },
+                    },
                 ),
                 Tool(
                     name="get_related_files",
@@ -74,27 +73,21 @@ class WorkspaceContextServer:
                     inputSchema={
                         "type": "object",
                         "properties": {
-                            "file_path": {
-                                "type": "string",
-                                "description": "Path to file"
-                            },
+                            "file_path": {"type": "string", "description": "Path to file"},
                             "relationship_type": {
                                 "type": "string",
                                 "enum": ["imports", "imported_by", "co_accessed", "all"],
                                 "description": "Type of relationship to find (default: all)",
-                                "default": "all"
-                            }
+                                "default": "all",
+                            },
                         },
-                        "required": ["file_path"]
-                    }
+                        "required": ["file_path"],
+                    },
                 ),
                 Tool(
                     name="get_access_patterns",
                     description="Analyze file access patterns to understand usage trends",
-                    inputSchema={
-                        "type": "object",
-                        "properties": {}
-                    }
+                    inputSchema={"type": "object", "properties": {}},
                 ),
                 Tool(
                     name="build_dependency_map",
@@ -104,10 +97,10 @@ class WorkspaceContextServer:
                         "properties": {
                             "root_path": {
                                 "type": "string",
-                                "description": "Root directory to scan (default: current directory)"
+                                "description": "Root directory to scan (default: current directory)",
                             }
-                        }
-                    }
+                        },
+                    },
                 ),
                 Tool(
                     name="predict_next_files",
@@ -117,23 +110,20 @@ class WorkspaceContextServer:
                         "properties": {
                             "current_file": {
                                 "type": "string",
-                                "description": "Current file being worked on (optional)"
+                                "description": "Current file being worked on (optional)",
                             },
                             "limit": {
                                 "type": "number",
                                 "description": "Maximum predictions (default: 5)",
-                                "default": 5
-                            }
-                        }
-                    }
+                                "default": 5,
+                            },
+                        },
+                    },
                 ),
                 Tool(
                     name="get_context_summary",
                     description="Get high-level summary of current workspace context",
-                    inputSchema={
-                        "type": "object",
-                        "properties": {}
-                    }
+                    inputSchema={"type": "object", "properties": {}},
                 ),
             ]
 
@@ -161,26 +151,28 @@ class WorkspaceContextServer:
 
     async def _handle_get_recommendations(self, arguments: dict) -> list[TextContent]:
         """Handle get_context_recommendations tool."""
-        limit = arguments.get('limit', 10)
-        include_dependencies = arguments.get('include_dependencies', True)
-        include_patterns = arguments.get('include_patterns', True)
+        limit = arguments.get("limit", 10)
+        include_dependencies = arguments.get("include_dependencies", True)
+        include_patterns = arguments.get("include_patterns", True)
 
         recommendations = self.analyzer.get_recommendations(
             limit=limit,
             include_dependencies=include_dependencies,
-            include_patterns=include_patterns
+            include_patterns=include_patterns,
         )
 
         if not recommendations:
-            return [TextContent(
-                type="text",
-                text="No recommendations available. Start working with files to build context."
-            )]
+            return [
+                TextContent(
+                    type="text",
+                    text="No recommendations available. Start working with files to build context.",
+                )
+            ]
 
         output = f"🎯 Context Recommendations ({len(recommendations)} files):\n\n"
 
         for idx, rec in enumerate(recommendations, 1):
-            score_bar = "█" * int(rec['score'] * 10)
+            score_bar = "█" * int(rec["score"] * 10)
             output += f"{idx}. {rec['file']}\n"
             output += f"   Score: {score_bar} ({rec['score']:.2f})\n"
             output += f"   Reasons: {', '.join(rec['reasons'])}\n\n"
@@ -189,29 +181,25 @@ class WorkspaceContextServer:
 
     async def _handle_get_related_files(self, arguments: dict) -> list[TextContent]:
         """Handle get_related_files tool."""
-        file_path = arguments.get('file_path')
-        relationship_type = arguments.get('relationship_type', 'all')
+        file_path = arguments.get("file_path")
+        relationship_type = arguments.get("relationship_type", "all")
 
         if not file_path:
             return [TextContent(type="text", text="Error: file_path is required")]
 
         related_files = self.analyzer.get_related_files(
-            file_path=file_path,
-            relationship_type=relationship_type
+            file_path=file_path, relationship_type=relationship_type
         )
 
         if not related_files:
-            return [TextContent(
-                type="text",
-                text=f"No related files found for {file_path}"
-            )]
+            return [TextContent(type="text", text=f"No related files found for {file_path}")]
 
         output = f"🔗 Related Files for {file_path}:\n\n"
 
         # Group by relationship type
         by_type = {}
         for rel in related_files:
-            rel_type = rel['relationship']
+            rel_type = rel["relationship"]
             if rel_type not in by_type:
                 by_type[rel_type] = []
             by_type[rel_type].append(rel)
@@ -219,7 +207,7 @@ class WorkspaceContextServer:
         for rel_type, files in by_type.items():
             output += f"\n{rel_type.upper().replace('_', ' ')}:\n"
             for rel in files:
-                strength_bar = "●" * int(rel['strength'] * 5)
+                strength_bar = "●" * int(rel["strength"] * 5)
                 output += f"  {strength_bar} {rel['file']}\n"
 
         return [TextContent(type="text", text=output)]
@@ -232,17 +220,17 @@ class WorkspaceContextServer:
         output += f"Total unique files: {patterns['total_files']}\n"
         output += f"Avg accesses per file: {patterns['average_session_files']:.1f}\n\n"
 
-        if patterns['most_accessed']:
+        if patterns["most_accessed"]:
             output += "Most Accessed Files:\n"
-            for item in patterns['most_accessed']:
+            for item in patterns["most_accessed"]:
                 output += f"  [{item['count']}×] {item['file']}\n"
             output += "\n"
 
-        if patterns['access_by_hour']:
+        if patterns["access_by_hour"]:
             output += "Access by Hour:\n"
-            max_count = max(patterns['access_by_hour'].values())
-            for hour in sorted(patterns['access_by_hour'].keys()):
-                count = patterns['access_by_hour'][hour]
+            max_count = max(patterns["access_by_hour"].values())
+            for hour in sorted(patterns["access_by_hour"].keys()):
+                count = patterns["access_by_hour"][hour]
                 bar = "█" * int((count / max_count) * 20)
                 output += f"  {hour:02d}:00 {bar} ({count})\n"
 
@@ -250,25 +238,22 @@ class WorkspaceContextServer:
 
     async def _handle_build_dependency_map(self, arguments: dict) -> list[TextContent]:
         """Handle build_dependency_map tool."""
-        root_path_str = arguments.get('root_path')
+        root_path_str = arguments.get("root_path")
         root_path = Path(root_path_str) if root_path_str else None
 
         dependency_map = self.analyzer.build_dependency_map(root_path=root_path)
 
         if not dependency_map:
-            return [TextContent(
-                type="text",
-                text="No Python files with dependencies found in workspace"
-            )]
+            return [
+                TextContent(
+                    type="text", text="No Python files with dependencies found in workspace"
+                )
+            ]
 
         output = f"📦 Dependency Map ({len(dependency_map)} files):\n\n"
 
         # Sort by number of dependencies
-        sorted_files = sorted(
-            dependency_map.items(),
-            key=lambda x: len(x[1]),
-            reverse=True
-        )
+        sorted_files = sorted(dependency_map.items(), key=lambda x: len(x[1]), reverse=True)
 
         for file_path, deps in sorted_files[:20]:  # Show top 20
             output += f"{file_path}\n"
@@ -286,24 +271,23 @@ class WorkspaceContextServer:
 
     async def _handle_predict_next_files(self, arguments: dict) -> list[TextContent]:
         """Handle predict_next_files tool."""
-        current_file = arguments.get('current_file')
-        limit = arguments.get('limit', 5)
+        current_file = arguments.get("current_file")
+        limit = arguments.get("limit", 5)
 
-        predictions = self.analyzer.predict_next_files(
-            current_file=current_file,
-            limit=limit
-        )
+        predictions = self.analyzer.predict_next_files(current_file=current_file, limit=limit)
 
         if not predictions:
-            return [TextContent(
-                type="text",
-                text="No predictions available. Build context by accessing more files."
-            )]
+            return [
+                TextContent(
+                    type="text",
+                    text="No predictions available. Build context by accessing more files.",
+                )
+            ]
 
         output = "🔮 Predicted Next Files:\n\n"
 
         for idx, pred in enumerate(predictions, 1):
-            confidence_bar = "█" * int(pred['confidence'] * 10)
+            confidence_bar = "█" * int(pred["confidence"] * 10)
             output += f"{idx}. {pred['file']}\n"
             output += f"   Confidence: {confidence_bar} ({pred['confidence']:.0%})\n"
             output += f"   Reason: {pred['reason']}\n\n"
@@ -320,22 +304,22 @@ class WorkspaceContextServer:
         output += f"Recent Queries: {summary['recent_queries_count']}\n"
         output += f"Recommendations Available: {summary['recommendations_available']}\n\n"
 
-        if summary['primary_file_types']:
+        if summary["primary_file_types"]:
             output += "Primary File Types:\n"
-            for ext, count in summary['primary_file_types'].items():
-                ext_display = ext if ext else '(no extension)'
+            for ext, count in summary["primary_file_types"].items():
+                ext_display = ext if ext else "(no extension)"
                 output += f"  {ext_display}: {count}\n"
             output += "\n"
 
-        if summary['server_usage']:
+        if summary["server_usage"]:
             output += "Server Usage:\n"
-            for server, count in summary['server_usage'].items():
+            for server, count in summary["server_usage"].items():
                 output += f"  {server}: {count} queries\n"
             output += "\n"
 
-        if summary['current_focus']:
+        if summary["current_focus"]:
             output += "Current Focus (Top 5):\n"
-            for file_info in summary['current_focus']:
+            for file_info in summary["current_focus"]:
                 output += f"  - {file_info['path']}\n"
                 output += f"    ({file_info.get('reason', 'unknown')})\n"
 
@@ -350,9 +334,7 @@ class WorkspaceContextServer:
 
         async with stdio_server() as (read_stream, write_stream):
             await self.server.run(
-                read_stream,
-                write_stream,
-                self.server.create_initialization_options()
+                read_stream, write_stream, self.server.create_initialization_options()
             )
 
 

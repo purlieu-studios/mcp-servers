@@ -7,9 +7,9 @@ repeated analysis of unchanged files.
 import hashlib
 import json
 import logging
-from pathlib import Path
-from typing import Any, Dict, Optional
 from datetime import datetime, timedelta
+from pathlib import Path
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 class AnalysisCache:
     """Cache for analysis results with file hash-based invalidation."""
 
-    def __init__(self, cache_dir: Optional[Path] = None):
+    def __init__(self, cache_dir: Path | None = None):
         """Initialize cache with storage directory.
 
         Args:
@@ -41,7 +41,7 @@ class AnalysisCache:
             Hex digest of file contents
         """
         try:
-            with open(file_path, 'rb') as f:
+            with open(file_path, "rb") as f:
                 return hashlib.md5(f.read()).hexdigest()
         except Exception as e:
             logger.error(f"Error hashing file {file_path}: {e}")
@@ -72,7 +72,7 @@ class AnalysisCache:
         """
         return self.cache_dir / f"{cache_key}.json"
 
-    def get(self, file_path: Path, analysis_type: str) -> Optional[Dict[str, Any]]:
+    def get(self, file_path: Path, analysis_type: str) -> dict[str, Any] | None:
         """Get cached analysis result if available.
 
         Args:
@@ -94,7 +94,7 @@ class AnalysisCache:
             return None
 
         try:
-            with open(cache_file, 'r') as f:
+            with open(cache_file) as f:
                 cached_data = json.load(f)
 
             # Verify cache metadata
@@ -118,7 +118,7 @@ class AnalysisCache:
             self.stats["misses"] += 1
             return None
 
-    def set(self, file_path: Path, analysis_type: str, result: Dict[str, Any]):
+    def set(self, file_path: Path, analysis_type: str, result: dict[str, Any]):
         """Store analysis result in cache.
 
         Args:
@@ -137,10 +137,10 @@ class AnalysisCache:
                 "file_path": str(file_path),
                 "analysis_type": analysis_type,
                 "cached_at": datetime.now().isoformat(),
-                "result": result
+                "result": result,
             }
 
-            with open(cache_file, 'w') as f:
+            with open(cache_file, "w") as f:
                 json.dump(cache_data, f, indent=2)
 
             self.stats["saves"] += 1
@@ -149,7 +149,7 @@ class AnalysisCache:
         except Exception as e:
             logger.error(f"Error saving cache {cache_key}: {e}")
 
-    def clear(self, older_than_days: Optional[int] = None):
+    def clear(self, older_than_days: int | None = None):
         """Clear cache entries.
 
         Args:
@@ -178,7 +178,7 @@ class AnalysisCache:
         logger.info(f"Cleared {cleared} cache entries")
         return cleared
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Get cache statistics.
 
         Returns:
@@ -199,12 +199,12 @@ class AnalysisCache:
             "hit_rate_percent": round(hit_rate, 2),
             "cache_entries": len(cache_files),
             "cache_size_mb": round(cache_size_mb, 2),
-            "cache_dir": str(self.cache_dir)
+            "cache_dir": str(self.cache_dir),
         }
 
 
 # Global cache instance
-_cache_instance: Optional[AnalysisCache] = None
+_cache_instance: AnalysisCache | None = None
 
 
 def get_cache() -> AnalysisCache:

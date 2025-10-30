@@ -1,19 +1,17 @@
 """Task Generator MCP Server - AI-powered project planning and task breakdown."""
 
 import asyncio
-import json
 import logging
-from typing import Any, Dict
+from typing import Any
 
 from mcp.server import Server
-from mcp.types import Tool, TextContent
+from mcp.types import TextContent, Tool
 
 from .task_generator import TaskGenerator
 
 # Set up logging
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -42,32 +40,38 @@ class TaskGeneratorServer:
                         "properties": {
                             "description": {
                                 "type": "string",
-                                "description": "Project or feature description"
+                                "description": "Project or feature description",
                             },
                             "template": {
                                 "type": "string",
-                                "enum": ["mcp_server", "api_integration", "database", "testing", "custom"],
+                                "enum": [
+                                    "mcp_server",
+                                    "api_integration",
+                                    "database",
+                                    "testing",
+                                    "custom",
+                                ],
                                 "description": "Template to use for generation (default: custom)",
-                                "default": "custom"
+                                "default": "custom",
                             },
                             "max_loc_per_commit": {
                                 "type": "number",
                                 "description": "Maximum lines of code per commit (default: 500)",
-                                "default": 500
+                                "default": 500,
                             },
                             "include_tests": {
                                 "type": "boolean",
                                 "description": "Include test tasks (default: true)",
-                                "default": True
+                                "default": True,
                             },
                             "include_docs": {
                                 "type": "boolean",
                                 "description": "Include documentation tasks (default: true)",
-                                "default": True
-                            }
+                                "default": True,
+                            },
                         },
-                        "required": ["description"]
-                    }
+                        "required": ["description"],
+                    },
                 ),
                 Tool(
                     name="refine_task_plan",
@@ -77,25 +81,25 @@ class TaskGeneratorServer:
                         "properties": {
                             "original_plan": {
                                 "type": "object",
-                                "description": "Original task plan to refine"
+                                "description": "Original task plan to refine",
                             },
                             "remove_task_types": {
                                 "type": "array",
                                 "items": {"type": "string"},
-                                "description": "Task types to remove (e.g., ['documentation', 'tests'])"
+                                "description": "Task types to remove (e.g., ['documentation', 'tests'])",
                             },
                             "split_task_id": {
                                 "type": "number",
-                                "description": "Task ID to split into multiple parts"
+                                "description": "Task ID to split into multiple parts",
                             },
                             "split_count": {
                                 "type": "number",
                                 "description": "Number of parts to split task into (default: 2)",
-                                "default": 2
-                            }
+                                "default": 2,
+                            },
                         },
-                        "required": ["original_plan"]
-                    }
+                        "required": ["original_plan"],
+                    },
                 ),
                 Tool(
                     name="estimate_complexity",
@@ -105,19 +109,16 @@ class TaskGeneratorServer:
                         "properties": {
                             "description": {
                                 "type": "string",
-                                "description": "Project description to analyze"
+                                "description": "Project description to analyze",
                             }
                         },
-                        "required": ["description"]
-                    }
+                        "required": ["description"],
+                    },
                 ),
                 Tool(
                     name="list_templates",
                     description="List all available task generation templates with descriptions",
-                    inputSchema={
-                        "type": "object",
-                        "properties": {}
-                    }
+                    inputSchema={"type": "object", "properties": {}},
                 ),
             ]
 
@@ -141,19 +142,17 @@ class TaskGeneratorServer:
 
     async def _handle_generate_task_plan(self, arguments: dict) -> list[TextContent]:
         """Handle generate_task_plan tool."""
-        description = arguments.get('description')
-        template = arguments.get('template', 'custom')
+        description = arguments.get("description")
+        template = arguments.get("template", "custom")
 
         constraints = {
-            'max_loc_per_commit': arguments.get('max_loc_per_commit', 500),
-            'include_tests': arguments.get('include_tests', True),
-            'include_docs': arguments.get('include_docs', True)
+            "max_loc_per_commit": arguments.get("max_loc_per_commit", 500),
+            "include_tests": arguments.get("include_tests", True),
+            "include_docs": arguments.get("include_docs", True),
         }
 
         plan = self.generator.generate_task_plan(
-            description=description,
-            template=template,
-            constraints=constraints
+            description=description, template=template, constraints=constraints
         )
 
         output = self._format_task_plan(plan)
@@ -161,14 +160,14 @@ class TaskGeneratorServer:
 
     async def _handle_refine_task_plan(self, arguments: dict) -> list[TextContent]:
         """Handle refine_task_plan tool."""
-        original_plan = arguments.get('original_plan')
+        original_plan = arguments.get("original_plan")
 
         adjustments = {}
-        if 'remove_task_types' in arguments:
-            adjustments['remove_task_types'] = arguments['remove_task_types']
-        if 'split_task_id' in arguments:
-            adjustments['split_task_id'] = arguments['split_task_id']
-            adjustments['split_count'] = arguments.get('split_count', 2)
+        if "remove_task_types" in arguments:
+            adjustments["remove_task_types"] = arguments["remove_task_types"]
+        if "split_task_id" in arguments:
+            adjustments["split_task_id"] = arguments["split_task_id"]
+            adjustments["split_count"] = arguments.get("split_count", 2)
 
         refined_plan = self.generator.refine_task_plan(original_plan, adjustments)
 
@@ -178,11 +177,11 @@ class TaskGeneratorServer:
 
     async def _handle_estimate_complexity(self, arguments: dict) -> list[TextContent]:
         """Handle estimate_complexity tool."""
-        description = arguments.get('description')
+        description = arguments.get("description")
 
         estimates = self.generator.estimate_complexity(description)
 
-        output = f"## Complexity Estimate\n\n"
+        output = "## Complexity Estimate\n\n"
         output += f"**Project**: {description[:100]}...\n\n"
         output += f"**Estimated LOC**: {estimates['estimated_loc']}\n"
         output += f"**Estimated Time**: ~{estimates['estimated_hours']} hours\n"
@@ -190,7 +189,7 @@ class TaskGeneratorServer:
         output += f"**Complexity Level**: {estimates['complexity_level'].upper()}\n\n"
 
         output += "**Complexity Indicators**:\n"
-        for indicator, present in estimates['complexity_indicators'].items():
+        for indicator, present in estimates["complexity_indicators"].items():
             status = "✓" if present else "✗"
             output += f"  {status} {indicator.replace('_', ' ').title()}\n"
 
@@ -207,7 +206,7 @@ class TaskGeneratorServer:
 
         return [TextContent(type="text", text=output)]
 
-    def _format_task_plan(self, plan: Dict[str, Any]) -> str:
+    def _format_task_plan(self, plan: dict[str, Any]) -> str:
         """Format task plan for display."""
         output = f"# Task Plan: {plan['project']}\n\n"
         output += f"**Template**: {plan['template']}\n"
@@ -216,16 +215,16 @@ class TaskGeneratorServer:
         output += f"**Task Count**: {plan['task_count']}\n\n"
 
         output += "## Tasks\n\n"
-        for task in plan['tasks']:
+        for task in plan["tasks"]:
             output += f"### Task {task['id']}: {task['title']}\n"
             output += f"**Description**: {task['description']}\n"
             output += f"**Estimated LOC**: {task['estimated_loc']}\n"
 
-            if task.get('dependencies'):
-                deps = ', '.join(str(d) for d in task['dependencies'])
+            if task.get("dependencies"):
+                deps = ", ".join(str(d) for d in task["dependencies"])
                 output += f"**Dependencies**: Tasks {deps}\n"
 
-            if task.get('files_to_create'):
+            if task.get("files_to_create"):
                 output += f"**Files**: {', '.join(task['files_to_create'])}\n"
 
             output += f"**Type**: {task.get('type', 'unknown')}\n\n"
@@ -241,9 +240,7 @@ class TaskGeneratorServer:
 
         async with stdio_server() as (read_stream, write_stream):
             await self.server.run(
-                read_stream,
-                write_stream,
-                self.server.create_initialization_options()
+                read_stream, write_stream, self.server.create_initialization_options()
             )
 
 

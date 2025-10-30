@@ -4,21 +4,20 @@ import asyncio
 import logging
 import sys
 from pathlib import Path
-from typing import Any, Dict, Optional
 
 # Add parent directory to path for shared imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from mcp.server import Server
-from mcp.types import Tool, TextContent
+from mcp.types import TextContent, Tool
+
+from shared.workspace_state import get_workspace_state
 
 from .session_store import get_session_store
-from shared.workspace_state import get_workspace_state
 
 # Set up logging
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -49,20 +48,17 @@ class SessionMemoryServer:
                             "role": {
                                 "type": "string",
                                 "enum": ["user", "assistant", "system"],
-                                "description": "Message role"
+                                "description": "Message role",
                             },
-                            "content": {
-                                "type": "string",
-                                "description": "Message content"
-                            },
+                            "content": {"type": "string", "description": "Message content"},
                             "tokens": {
                                 "type": "number",
                                 "description": "Token count (optional)",
-                                "default": 0
-                            }
+                                "default": 0,
+                            },
                         },
-                        "required": ["role", "content"]
-                    }
+                        "required": ["role", "content"],
+                    },
                 ),
                 Tool(
                     name="get_session_history",
@@ -72,27 +68,21 @@ class SessionMemoryServer:
                         "properties": {
                             "session_id": {
                                 "type": "number",
-                                "description": "Session ID (optional, uses current session)"
+                                "description": "Session ID (optional, uses current session)",
                             },
                             "limit": {
                                 "type": "number",
                                 "description": "Maximum number of messages (default: 50)",
-                                "default": 50
+                                "default": 50,
                             },
-                            "role": {
-                                "type": "string",
-                                "description": "Filter by role (optional)"
-                            }
-                        }
-                    }
+                            "role": {"type": "string", "description": "Filter by role (optional)"},
+                        },
+                    },
                 ),
                 Tool(
                     name="get_current_session",
                     description="Get information about the current active session",
-                    inputSchema={
-                        "type": "object",
-                        "properties": {}
-                    }
+                    inputSchema={"type": "object", "properties": {}},
                 ),
                 Tool(
                     name="search_sessions",
@@ -102,19 +92,16 @@ class SessionMemoryServer:
                         "properties": {
                             "query": {
                                 "type": "string",
-                                "description": "Search query (searches messages and decisions)"
+                                "description": "Search query (searches messages and decisions)",
                             },
-                            "tag": {
-                                "type": "string",
-                                "description": "Filter by tag"
-                            },
+                            "tag": {"type": "string", "description": "Filter by tag"},
                             "limit": {
                                 "type": "number",
                                 "description": "Maximum results (default: 10)",
-                                "default": 10
-                            }
-                        }
-                    }
+                                "default": 10,
+                            },
+                        },
+                    },
                 ),
                 Tool(
                     name="log_decision",
@@ -122,17 +109,14 @@ class SessionMemoryServer:
                     inputSchema={
                         "type": "object",
                         "properties": {
-                            "decision": {
-                                "type": "string",
-                                "description": "Decision description"
-                            },
+                            "decision": {"type": "string", "description": "Decision description"},
                             "context": {
                                 "type": "string",
-                                "description": "Additional context (optional)"
-                            }
+                                "description": "Additional context (optional)",
+                            },
                         },
-                        "required": ["decision"]
-                    }
+                        "required": ["decision"],
+                    },
                 ),
                 Tool(
                     name="end_session",
@@ -142,18 +126,15 @@ class SessionMemoryServer:
                         "properties": {
                             "summary": {
                                 "type": "string",
-                                "description": "Session summary (optional)"
+                                "description": "Session summary (optional)",
                             }
-                        }
-                    }
+                        },
+                    },
                 ),
                 Tool(
                     name="get_session_stats",
                     description="Get statistics about session memory usage",
-                    inputSchema={
-                        "type": "object",
-                        "properties": {}
-                    }
+                    inputSchema={"type": "object", "properties": {}},
                 ),
             ]
 
@@ -183,28 +164,21 @@ class SessionMemoryServer:
 
     async def _handle_log_message(self, arguments: dict) -> list[TextContent]:
         """Handle log_message tool."""
-        role = arguments.get('role')
-        content = arguments.get('content')
-        tokens = arguments.get('tokens', 0)
+        role = arguments.get("role")
+        content = arguments.get("content")
+        tokens = arguments.get("tokens", 0)
 
         message_id = self.store.log_message(role=role, content=content, tokens=tokens)
 
-        return [TextContent(
-            type="text",
-            text=f"Message logged (ID: {message_id})"
-        )]
+        return [TextContent(type="text", text=f"Message logged (ID: {message_id})")]
 
     async def _handle_get_session_history(self, arguments: dict) -> list[TextContent]:
         """Handle get_session_history tool."""
-        session_id = arguments.get('session_id')
-        limit = arguments.get('limit', 50)
-        role = arguments.get('role')
+        session_id = arguments.get("session_id")
+        limit = arguments.get("limit", 50)
+        role = arguments.get("role")
 
-        messages = self.store.get_session_messages(
-            session_id=session_id,
-            limit=limit,
-            role=role
-        )
+        messages = self.store.get_session_messages(session_id=session_id, limit=limit, role=role)
 
         if not messages:
             return [TextContent(type="text", text="No messages found")]
@@ -213,7 +187,7 @@ class SessionMemoryServer:
         for msg in reversed(messages):  # Show chronologically
             output += f"[{msg['role'].upper()}] {msg['timestamp']}\n"
             output += f"{msg['content'][:200]}\n"
-            if len(msg['content']) > 200:
+            if len(msg["content"]) > 200:
                 output += "...\n"
             output += f"Tokens: {msg['tokens']}\n"
             output += "-" * 60 + "\n\n"
@@ -227,28 +201,28 @@ class SessionMemoryServer:
         if not session_info:
             return [TextContent(type="text", text="No active session")]
 
-        output = f"📊 Current Session\n\n"
+        output = "📊 Current Session\n\n"
         output += f"Session ID: {session_info['id']}\n"
         output += f"Started: {session_info['start_time']}\n"
         output += f"Status: {session_info['status']}\n"
         output += f"Messages: {session_info['message_count']}\n"
         output += f"Total tokens: {session_info['total_tokens']}\n"
 
-        if session_info.get('tags'):
-            output += f"\nTags:\n"
-            for tag, value in session_info['tags'].items():
+        if session_info.get("tags"):
+            output += "\nTags:\n"
+            for tag, value in session_info["tags"].items():
                 output += f"  {tag}: {value}\n"
 
-        if session_info.get('summary'):
+        if session_info.get("summary"):
             output += f"\nSummary: {session_info['summary']}\n"
 
         return [TextContent(type="text", text=output)]
 
     async def _handle_search_sessions(self, arguments: dict) -> list[TextContent]:
         """Handle search_sessions tool."""
-        query = arguments.get('query')
-        tag = arguments.get('tag')
-        limit = arguments.get('limit', 10)
+        query = arguments.get("query")
+        tag = arguments.get("tag")
+        limit = arguments.get("limit", 10)
 
         sessions = self.store.search_sessions(query=query, tag=tag, limit=limit)
 
@@ -260,7 +234,7 @@ class SessionMemoryServer:
             output += f"Session {session['id']}\n"
             output += f"Started: {session['start_time']}\n"
             output += f"Messages: {session['message_count']}, Tokens: {session['total_tokens']}\n"
-            if session.get('summary'):
+            if session.get("summary"):
                 output += f"Summary: {session['summary'][:100]}\n"
             output += "-" * 60 + "\n\n"
 
@@ -268,8 +242,8 @@ class SessionMemoryServer:
 
     async def _handle_log_decision(self, arguments: dict) -> list[TextContent]:
         """Handle log_decision tool."""
-        decision = arguments.get('decision')
-        context = arguments.get('context')
+        decision = arguments.get("decision")
+        context = arguments.get("context")
 
         decision_id = self.store.log_decision(decision=decision, context=context)
 
@@ -278,32 +252,30 @@ class SessionMemoryServer:
             self.workspace_state.add_task(
                 description=decision,
                 status="completed",
-                metadata={"source": "session_memory", "decision_id": decision_id}
+                metadata={"source": "session_memory", "decision_id": decision_id},
             )
         except Exception as e:
             logger.error(f"Error updating workspace state: {e}")
 
-        return [TextContent(
-            type="text",
-            text=f"Decision logged (ID: {decision_id})"
-        )]
+        return [TextContent(type="text", text=f"Decision logged (ID: {decision_id})")]
 
     async def _handle_end_session(self, arguments: dict) -> list[TextContent]:
         """Handle end_session tool."""
-        summary = arguments.get('summary')
+        summary = arguments.get("summary")
 
         self.store.end_session(summary=summary)
 
-        return [TextContent(
-            type="text",
-            text=f"Session ended" + (f" with summary: {summary}" if summary else "")
-        )]
+        return [
+            TextContent(
+                type="text", text="Session ended" + (f" with summary: {summary}" if summary else "")
+            )
+        ]
 
     async def _handle_get_session_stats(self, arguments: dict) -> list[TextContent]:
         """Handle get_session_stats tool."""
         stats = self.store.get_stats()
 
-        output = f"📈 Session Memory Statistics\n\n"
+        output = "📈 Session Memory Statistics\n\n"
         output += f"Total sessions: {stats['total_sessions']}\n"
         output += f"Active sessions: {stats['active_sessions']}\n"
         output += f"Total messages: {stats['total_messages']}\n"
@@ -322,9 +294,7 @@ class SessionMemoryServer:
 
         async with stdio_server() as (read_stream, write_stream):
             await self.server.run(
-                read_stream,
-                write_stream,
-                self.server.create_initialization_options()
+                read_stream, write_stream, self.server.create_initialization_options()
             )
 
 
