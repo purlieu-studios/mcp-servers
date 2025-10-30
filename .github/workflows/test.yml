@@ -30,7 +30,7 @@ jobs:
       run: |
         cd ${{ matrix.server }}
         python -m pip install --upgrade pip
-        pip install pytest pytest-asyncio pytest-cov pytest-mock
+        pip install pytest pytest-asyncio pytest-cov pytest-mock pytest-xdist
         if [ -f "setup.py" ] || [ -f "pyproject.toml" ]; then
           pip install -e .
         elif [ -f "requirements.txt" ]; then

@@ -8,7 +8,9 @@
       "Bash(python -m py_compile:*)",
       "Bash(gh run list:*)",
       "Bash(gh run view:*)",
-      "Bash(gh run watch:*)"
+      "Bash(gh run watch:*)",
+      "Bash(find:*)",
+      "Bash(python -m pip install:*)"
     ],
     "deny": [],
     "ask": []
