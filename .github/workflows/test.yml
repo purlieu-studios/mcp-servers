@@ -26,11 +26,16 @@ jobs:
         cache: 'pip'
 
     - name: Install dependencies for ${{ matrix.server }}
+      shell: bash
       run: |
         cd ${{ matrix.server }}
         python -m pip install --upgrade pip
-        pip install -e .
         pip install pytest pytest-asyncio pytest-cov pytest-mock
+        if [ -f "setup.py" ] || [ -f "pyproject.toml" ]; then
+          pip install -e .
+        elif [ -f "requirements.txt" ]; then
+          pip install -r requirements.txt
+        fi
 
     - name: Run tests for ${{ matrix.server }}
       run: |
