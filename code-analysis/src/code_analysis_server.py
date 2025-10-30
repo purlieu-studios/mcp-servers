@@ -2,11 +2,15 @@
 
 import logging
 import asyncio
+import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 import mcp.types as types
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
+
+# Add parent directory to path for shared imports
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from .analyzers.python_analyzer import PythonAnalyzer
 from .analyzers.javascript_analyzer import JavaScriptAnalyzer
@@ -15,6 +19,7 @@ from .complexity import calculate_complexity
 from .code_smells import detect_code_smells
 from .dependency_analyzer import DependencyAnalyzer
 from .analysis_cache import get_cache
+from shared.workspace_state import get_workspace_state
 
 logger = logging.getLogger(__name__)
 
@@ -33,8 +38,9 @@ analyzers = {
 
 dependency_analyzer = DependencyAnalyzer()
 
-# Initialize cache
+# Initialize cache and workspace state
 cache = get_cache()
+workspace_state = get_workspace_state()
 
 
 @server.list_tools()
@@ -273,6 +279,20 @@ async def handle_analyze_complexity(arguments: Dict[str, Any]) -> Dict[str, Any]
     # Store in cache
     cache.set(file_path, cache_key, result)
     logger.info(f"[CACHE MISS] Computed complexity for {file_path.name}")
+
+    # Log to workspace
+    try:
+        workspace_state.add_focus_file(
+            file_path=str(file_path),
+            reason="complexity_analysis"
+        )
+        workspace_state.add_query(
+            server="code-analysis",
+            tool="analyze_complexity",
+            metadata={"file": str(file_path), "function": function_name}
+        )
+    except Exception as e:
+        logger.error(f"Error updating workspace: {e}")
 
     return result
 

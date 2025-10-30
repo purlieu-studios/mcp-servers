@@ -4,8 +4,12 @@ import asyncio
 import json
 import logging
 import os
+import sys
 from pathlib import Path
 from typing import Dict, Any, Optional
+
+# Add parent directory to path for shared imports
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from mcp.server import Server
 from mcp.types import Tool, TextContent
@@ -15,6 +19,7 @@ from .document_processor import DocumentProcessor
 from .index_manager import IndexManager
 from .file_watcher import FileWatcher
 from .query_history import get_query_history
+from shared.workspace_state import get_workspace_state
 
 # Set up logging
 logging.basicConfig(
@@ -35,6 +40,7 @@ class RAGServer:
         self.doc_processor: Optional[DocumentProcessor] = None
         self.file_watcher: Optional[FileWatcher] = None
         self.query_history = get_query_history()
+        self.workspace_state = get_workspace_state()
 
         self._register_handlers()
 
@@ -281,6 +287,30 @@ class RAGServer:
                         "required": ["query_id"]
                     }
                 ),
+                Tool(
+                    name="get_workspace_context",
+                    description="Get current workspace context (focus files, recent queries, active tasks)",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "include_focus_files": {
+                                "type": "boolean",
+                                "description": "Include focus files (default: true)",
+                                "default": True
+                            },
+                            "include_recent_queries": {
+                                "type": "boolean",
+                                "description": "Include recent queries (default: true)",
+                                "default": True
+                            },
+                            "include_active_tasks": {
+                                "type": "boolean",
+                                "description": "Include active tasks (default: true)",
+                                "default": True
+                            }
+                        }
+                    }
+                ),
             ]
 
         @self.server.call_tool()
@@ -301,6 +331,8 @@ class RAGServer:
                     return await self._handle_get_query_history(arguments)
                 elif name == "replay_query":
                     return await self._handle_replay_query(arguments)
+                elif name == "get_workspace_context":
+                    return await self._handle_get_workspace_context(arguments)
                 else:
                     return [TextContent(type="text", text=f"Unknown tool: {name}")]
             except Exception as e:
@@ -374,6 +406,27 @@ class RAGServer:
             )
         except Exception as e:
             logger.error(f"Error saving query history: {e}")
+
+        # Log to workspace state
+        try:
+            self.workspace_state.add_query(
+                server="rag",
+                query=query,
+                metadata={
+                    "index_name": index_name,
+                    "result_count": len(all_results),
+                    "duration_ms": duration_ms
+                }
+            )
+            # Add result files to focus
+            for result in all_results[:3]:  # Top 3 results
+                self.workspace_state.add_focus_file(
+                    file_path=result['file'],
+                    reason="search_result",
+                    metadata={"score": result['score'], "query": query[:50]}
+                )
+        except Exception as e:
+            logger.error(f"Error updating workspace state: {e}")
 
         # Format results
         if not all_results:
@@ -568,6 +621,67 @@ class RAGServer:
             output += f"Location: chars {result['location']}\n"
             output += f"Content:\n{result['text']}\n"
             output += "-" * 80 + "\n\n"
+
+        return [TextContent(type="text", text=output)]
+
+    async def _handle_get_workspace_context(self, arguments: dict) -> list[TextContent]:
+        """Handle get_workspace_context tool."""
+        include_focus = arguments.get('include_focus_files', True)
+        include_queries = arguments.get('include_recent_queries', True)
+        include_tasks = arguments.get('include_active_tasks', True)
+
+        state = self.workspace_state.get_full_state()
+
+        output = "📋 Workspace Context\n\n"
+
+        # Session metadata
+        session_meta = state.get('session_metadata', {})
+        output += f"**Session Info:**\n"
+        output += f"- Started: {session_meta.get('session_start', 'N/A')}\n"
+        output += f"- Total queries: {session_meta.get('total_queries', 0)}\n"
+        output += f"- Servers used: {', '.join(session_meta.get('servers_used', []))}\n"
+        output += f"- Last updated: {state.get('last_updated', 'N/A')}\n\n"
+
+        # Focus files
+        if include_focus:
+            focus_files = state.get('focus_files', [])
+            output += f"**Focus Files ({len(focus_files)}):**\n"
+            for i, file_entry in enumerate(focus_files[:10], 1):
+                output += f"{i}. {file_entry['path']}\n"
+                output += f"   Reason: {file_entry.get('reason', 'N/A')}\n"
+                output += f"   Last accessed: {file_entry.get('last_accessed', 'N/A')}\n"
+            if len(focus_files) > 10:
+                output += f"   ... and {len(focus_files) - 10} more\n"
+            output += "\n"
+
+        # Recent queries
+        if include_queries:
+            queries = state.get('recent_queries', [])
+            output += f"**Recent Queries ({len(queries)}):**\n"
+            for i, query_entry in enumerate(queries[:10], 1):
+                output += f"{i}. [{query_entry.get('server', 'unknown')}] "
+                if 'query' in query_entry:
+                    output += f"\"{query_entry['query'][:50]}\"\n"
+                elif 'tool' in query_entry:
+                    output += f"{query_entry['tool']}\n"
+                output += f"   Time: {query_entry.get('timestamp', 'N/A')}\n"
+            if len(queries) > 10:
+                output += f"   ... and {len(queries) - 10} more\n"
+            output += "\n"
+
+        # Active tasks
+        if include_tasks:
+            tasks = state.get('active_tasks', [])
+            output += f"**Active Tasks ({len(tasks)}):**\n"
+            if tasks:
+                for i, task in enumerate(tasks, 1):
+                    output += f"{i}. {task['description']}\n"
+                    output += f"   Status: {task['status']}\n"
+                    files = task.get('files', [])
+                    if files:
+                        output += f"   Files: {', '.join(files[:3])}\n"
+            else:
+                output += "No active tasks\n"
 
         return [TextContent(type="text", text=output)]
 
