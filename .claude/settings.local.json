@@ -2,7 +2,13 @@
   "permissions": {
     "allow": [
       "Bash(git branch:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nfeat: add PR template and contribution guidelines with 500 LOC limit\n\n## New Files\n\n### Contributing Guidelines\n- **CONTRIBUTING.md** - Comprehensive contribution guide\n  - 500 LOC limit for PRs (excluding tests/docs)\n  - Development workflow and best practices\n  - Testing requirements (≥80% coverage)\n  - Code style and quality guidelines\n  - Commit message conventions\n  - Branch naming standards\n\n### GitHub Templates\n- **.github/PULL_REQUEST_TEMPLATE.md** - Structured PR template\n  - LOC size check reminder\n  - Testing checklist\n  - Documentation requirements\n  - Code quality verification\n  - Review focus areas\n\n- **.github/ISSUE_TEMPLATE/bug_report.md** - Bug report template\n- **.github/ISSUE_TEMPLATE/feature_request.md** - Feature request template\n- **.github/ISSUE_TEMPLATE/config.yml** - Issue template configuration\n\n### Automated Checks\n- **.github/workflows/pr-size-check.yml** - PR size automation\n  - Automatically checks production code LOC\n  - Posts warning if over 500 LOC\n  - Posts success message if within limit\n  - Excludes tests, docs, and config from count\n\n### Documentation Updates\n- **README.md** - Added Contributing section\n  - Quick start for contributors\n  - Links to contribution guidelines\n  - Clear expectations for PRs\n\n## Benefits\n\n🎯 **Clear Expectations**: Contributors know PR size limits upfront\n🤖 **Automated Checks**: GitHub Action validates PR size automatically\n📝 **Better Reviews**: Smaller PRs = faster, more thorough reviews\n🔒 **Lower Risk**: Smaller changes easier to test and rollback\n✅ **Quality Focus**: Encourages focused, single-purpose PRs\n\n## Rationale for 500 LOC Limit\n\nBased on industry best practices:\n- Google: 200-400 LOC recommended\n- Microsoft: 200-500 LOC recommended\n- Studies show: <400 LOC = 70-90% fewer defects\n\nWe chose 500 LOC as a balance between:\n- Allowing meaningful features\n- Maintaining reviewability\n- Reducing defect introduction\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git commit:*)",
+      "Bash(python -m py_compile:*)",
+      "Bash(gh run list:*)",
+      "Bash(gh run view:*)",
+      "Bash(gh run watch:*)"
     ],
     "deny": [],
     "ask": []

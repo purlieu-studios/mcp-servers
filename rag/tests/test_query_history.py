@@ -20,11 +20,18 @@ class TestQueryHistory:
         with tempfile.TemporaryDirectory() as tmp_dir:
             db_path = Path(tmp_dir) / "test_history.db"
             yield db_path
+            # Force close any lingering connections on Windows
+            import gc
+            gc.collect()
 
     @pytest.fixture
     def history(self, temp_db):
         """Create QueryHistory instance with temporary database."""
-        return QueryHistory(db_path=temp_db)
+        hist = QueryHistory(db_path=temp_db)
+        yield hist
+        # Ensure all connections are closed
+        import gc
+        gc.collect()
 
     @pytest.fixture
     def sample_results(self):
@@ -53,11 +60,16 @@ class TestQueryHistory:
 
         # Verify schema was created
         import sqlite3
+        import gc
         with sqlite3.connect(temp_db) as conn:
             cursor = conn.execute(
                 "SELECT name FROM sqlite_master WHERE type='table' AND name='query_history'"
             )
             assert cursor.fetchone() is not None
+
+        # Force cleanup of connections
+        del history
+        gc.collect()
 
     def test_save_query_stores_data(self, history, sample_results):
         """Test saving query stores all data correctly."""
