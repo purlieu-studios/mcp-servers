@@ -14,7 +14,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest]
         python-version: ['3.14']
-        server: ['efcore-analysis', 'rag', 'task-generator']
+        server: ['efcore-analysis', 'rag', 'task-generator', 'workspace-context', 'session-memory']
         # TODO: Temporarily disabled code-analysis - tests hang in CI but pass locally
         # Issue: Tests complete locally in 3.53s but hang in CI on both Ubuntu/Windows
         # Needs investigation: possible async/pytest-asyncio CI environment issue

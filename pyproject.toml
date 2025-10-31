@@ -69,3 +69,12 @@ skip-magic-trailing-comma = false
 
 # Auto-detect line ending
 line-ending = "auto"
+
+[tool.pytest.ini_options]
+# Define pytest markers to avoid warnings
+markers = [
+    "unit: Unit tests",
+    "integration: Integration tests",
+    "slow: Slow tests (deselect with '-m \"not slow\"')",
+    "e2e: End-to-end tests",
+]

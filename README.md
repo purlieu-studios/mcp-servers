@@ -3,7 +3,7 @@
 ![Tests](https://github.com/purlieu-studios/mcp-servers/actions/workflows/test.yml/badge.svg)
 [![codecov](https://codecov.io/gh/purlieu-studios/mcp-servers/branch/main/graph/badge.svg)](https://codecov.io/gh/purlieu-studios/mcp-servers)
 
-A comprehensive collection of Model Context Protocol (MCP) servers for code analysis, database management, and intelligent document search.
+A comprehensive collection of Model Context Protocol (MCP) servers for code analysis, database management, intelligent document search, AI-powered task planning, and context-aware workspace intelligence.
 
 ## 🚀 Available Servers
 
@@ -75,6 +75,80 @@ Specialized Entity Framework Core analysis, optimization, and migration support.
 
 ---
 
+### 4. **Task Generator Server** - AI Project Planning 🎯
+**Path**: `./task-generator/` | **Status**: ✅ Production Ready (14 tests passing, 55% coverage)
+
+AI-powered project planning and task breakdown with LOC estimation.
+
+**Features:**
+- 🤖 Smart task generation from natural language descriptions
+- 📋 Template system for common patterns (MCP servers, APIs, databases, testing)
+- 📊 Complexity analysis with LOC and time estimates
+- 🔄 Plan refinement capabilities (remove, split, modify tasks)
+- 💡 Commit planning with 500 LOC limit respect
+- 🔗 Automatic dependency tracking
+
+**4 Planning Tools:**
+- `generate_task_plan` - Convert descriptions into structured task plans
+- `refine_task_plan` - Adjust plans with modifications
+- `estimate_complexity` - Analyze project scope and effort
+- `list_templates` - Show available task templates
+
+[📖 Documentation](./task-generator/README.md)
+
+---
+
+### 5. **Workspace Context Server** - Smart File Recommendations 🧠
+**Path**: `./workspace-context/` | **Status**: ✅ Production Ready (20 tests passing, 50% coverage)
+
+Intelligent context prediction and file recommendations based on workspace state.
+
+**Features:**
+- 🎯 Smart file recommendations based on current work context
+- 🔗 Dependency analysis through import mapping
+- 📈 Pattern detection from access history
+- 🔮 Next-file prediction with confidence scores
+- 📊 Access analytics and usage trends
+- 📝 High-level workspace context summary
+
+**6 Context Tools:**
+- `get_context_recommendations` - Get ranked file suggestions
+- `get_related_files` - Find dependencies and relationships
+- `get_access_patterns` - Analyze file usage trends
+- `build_dependency_map` - Map Python project dependencies
+- `predict_next_files` - Predict likely next files to access
+- `get_context_summary` - Workspace state overview
+
+[📖 Documentation](./workspace-context/README.md)
+
+---
+
+### 6. **Session Memory Server** - Conversation Tracking 💬
+**Path**: `./session-memory/` | **Status**: ✅ Production Ready (20 tests passing, 51% coverage)
+
+Tracks conversation history and session context across restarts.
+
+**Features:**
+- 💾 Persistent conversation logging with SQLite storage
+- 🔄 Automatic session management (30min inactivity = new session)
+- 📌 Decision logging for key actions and choices
+- 🔍 Full-text search across past conversations
+- 📊 Session statistics and token usage tracking
+- 🔗 Integration with workspace state
+
+**7 Memory Tools:**
+- `log_message` - Track conversation messages
+- `get_session_history` - Retrieve session conversations
+- `get_current_session` - Get active session info
+- `search_sessions` - Search past conversations
+- `log_decision` - Record key decisions
+- `end_session` - Close session with summary
+- `get_session_stats` - View memory usage statistics
+
+[📖 Documentation](./session-memory/README.md)
+
+---
+
 ## 📦 Installation
 
 Each server can be installed independently:
@@ -88,6 +162,15 @@ cd code-analysis && pip install -r requirements.txt
 
 # EF Core Analysis Server
 cd efcore-analysis && pip install -r requirements.txt
+
+# Task Generator Server
+cd task-generator && pip install -r requirements.txt
+
+# Workspace Context Server
+cd workspace-context && pip install -r requirements.txt
+
+# Session Memory Server
+cd session-memory && pip install -r requirements.txt
 ```
 
 ## 🔧 Claude Code Configuration
@@ -114,6 +197,21 @@ Add servers to `%APPDATA%\Claude\claude_desktop_config.json`:
       "command": "python",
       "args": ["-m", "src.efcore_server"],
       "cwd": "C:\\programming\\mcp-servers\\efcore-analysis"
+    },
+    "task-generator": {
+      "command": "python",
+      "args": ["-m", "src.task_generator_server"],
+      "cwd": "C:\\programming\\mcp-servers\\task-generator"
+    },
+    "workspace-context": {
+      "command": "python",
+      "args": ["-m", "src.workspace_context_server"],
+      "cwd": "C:\\programming\\mcp-servers\\workspace-context"
+    },
+    "session-memory": {
+      "command": "python",
+      "args": ["-m", "src.session_memory_server"],
+      "cwd": "C:\\programming\\mcp-servers\\session-memory"
     }
   }
 }
@@ -153,10 +251,11 @@ Returns:
 
 ## 📊 Project Statistics
 
-- **Total MCP Servers:** 3
-- **Total MCP Tools:** 18 (5 + 6 + 7)
-- **Lines of Code:** ~5,000+
-- **Test Coverage:** 88% (RAG server with 107 passing tests)
+- **Total MCP Servers:** 6
+- **Total MCP Tools:** 37 (5 + 8 + 7 + 4 + 6 + 7)
+- **Total Tests:** 300+ passing across all servers
+- **Lines of Code:** ~8,500+
+- **Average Coverage:** 64% across all servers
 - **Languages Supported:** Python, JavaScript/TypeScript, C#
 
 ## 📁 Repository Structure
@@ -226,15 +325,21 @@ cd rag && python -m pytest tests/ -v --cov=src
 - [x] Comprehensive RAG test suite (unit + integration)
 - [x] Code Analysis Server (Python AST + multi-language)
 - [x] EF Core Analysis Server (DbContext + LINQ + migrations)
+- [x] Task Generator Server (AI-powered project planning)
+- [x] Workspace Context Server (smart file recommendations)
+- [x] Session Memory Server (conversation tracking)
+- [x] Pre-commit hooks (ruff, file checks)
+- [x] CI/CD pipeline (GitHub Actions)
 
 ### In Progress 🚧
+- [ ] Code-analysis CI hanging fix
+- [ ] Integration tests for server files
 - [ ] AST-based code chunking for RAG
 - [ ] Query result caching for RAG
-- [ ] Project Structure Server
-- [ ] Git Operations Server
-- [ ] Dependency Analysis Server
 
 ### Planned 📋
+- [ ] Project Structure Server
+- [ ] Git Operations Server
 - [ ] More language support (Java, Go, Rust)
 - [ ] Visual relationship diagrams (Mermaid/PlantUML)
 - [ ] Performance profiling integration
